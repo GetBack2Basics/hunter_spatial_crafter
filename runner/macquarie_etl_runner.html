@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macquarie ETL Runner</title>
+<style>
+body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; }
+.container { max-width: 800px; margin: 0 auto; }
+input, button { padding: 0.5rem; margin: 0.25rem; border-radius: 0.25rem; border: 1px solid #475569; background: #1e293b; color: #f8fafc; }
+button { cursor: pointer; background: #3b82f6; border: none; font-weight: 600; }
+button:hover { background: #2563eb; }
+.output { background: #020617; border: 1px solid #475569; padding: 1rem; margin-top: 1rem; border-radius: 0.25rem; font-family: monospace; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+.step { margin: 1rem 0; padding: 1rem; background: #1e293b; border-radius: 0.25rem; }
+.step-title { font-weight: 600; color: #60a5fa; margin-bottom: 0.5rem; }
+.error { color: #ef4444; }
+.success { color: #10b981; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Macquarie Coal Complex — Wherobots ETL Runner</h1>
+  
+  <div class="step">
+    <div class="step-title">Configuration</div>
+    <label>API Key: <input type="password" id="apiKey" value="wbk_user_0ccdpe9bdefvydj9vlj5mf4gx1vi7nbbm03lk4ntes8kebqe6okm78edmc50b9vo" size="60"></label><br>
+    <label>Notebook ID: <input type="text" id="notebookId" value="j9s2n4mtsdknro" size="40"></label><br>
+    <button onclick="runETL()">Run Macquarie ETL</button>
+  </div>
+
+  <div class="step">
+    <div class="step-title">Output</div>
+    <div id="output" class="output">Ready. Click "Run Macquarie ETL" to start.</div>
+  </div>
+</div>
+
+<script>
+const BASE_URL = 'https://aws-us-west-2.compute.cloud.wherobots.com/jupyter/ltq5l3obgb';
+let outputEl = document.getElementById('output');
+let apiKeyEl = document.getElementById('apiKey');
+let notebookIdEl = document.getElementById('notebookId');
+
+function log(msg, isError = false) {
+  const span = document.createElement('div');
+  span.textContent = msg;
+  span.className = isError ? 'error' : 'success';
+  outputEl.appendChild(span);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+async function waitKernelReady(base, headers, maxAttempts = 30) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const r = await fetch(base, { headers });
+    if (r.ok) return true;
+    if (r.status !== 502) throw new Error(`Unexpected status ${r.status}`);
+    await new Promise(res => setTimeout(res, 2000));
+  }
+  throw new Error('Timeout waiting for container');
+}
+
+async function startKernel(base, headers) {
+  const r = await fetch(`${base}/api/kernels`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'python3' })
+  });
+  if (!r.ok) throw new Error(`Failed to start kernel: ${r.status}`);
+  return await r.json();
+}
+
+async function executeCode(base, wsBase, kernelId, code, headers) {
+  const ws = new WebSocket(`${wsBase}/api/kernels/${kernelId}/channels`);
+  
+  return new Promise((resolve, reject) => {
+    const sessionId = crypto.randomUUID();
+    const msgId = crypto.randomUUID();
+    const executeMsg = {
+      header: { msg_id: msgId, username: 'wherobots', session: sessionId, msg_type: 'execute_request', version: '5.3' },
+      metadata: {},
+      content: { code, silent: false, store_history: true, user_expressions: {}, allow_stdin: false, stop_on_error: true },
+      parent_header: {},
+      channel: 'shell'
+    };
+    
+    let stdout = [];
+    let errors = [];
+    let done = false;
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      const msgType = msg.header?.msg_type;
+      const channel = msg.channel;
+      
+      if (msgType === 'stream') {
+        const text = msg.content?.text || '';
+        stdout.push(text);
+        log(text);
+      } else if (msgType === 'error') {
+        const traceback = msg.content?.traceback || [];
+        errors.push(...traceback);
+        log(traceback.join('\n'), true);
+      } else if (msgType === 'execute_reply' && channel === 'shell') {
+        done = true;
+        ws.close();
+      }
+    };
+
+    ws.onerror = (err) => {
+      ws.close();
+      reject(new Error('WebSocket error'));
+    };
+
+    ws.onclose = () => {
+      if (errors.length) reject(new Error(errors.join('\n')));
+      else resolve(stdout.join(''));
+    };
+
+    ws.send(JSON.stringify(executeMsg));
+  });
+}
+
+async function stopKernel(base, kernelId, headers) {
+  try {
+    await fetch(`${base}/api/kernels/${kernelId}`, { method: 'DELETE', headers });
+  } catch (e) {
+    log(`Warning: failed to stop kernel: ${e.message}`, true);
+  }
+}
+
+async function runETL() {
+  const apiKey = apiKeyEl.value.trim();
+  const notebookId = notebookIdEl.value.trim();
+  const base = `${BASE_URL}/${notebookId}`;
+  const wsBase = `wss://${BASE_URL.replace('https://', '')}/${notebookId}`;
+  const headers = { 'x-api-key': apiKey, 'Content-Type': 'application/json' };
+  
+  outputEl.innerHTML = '';
+  log('Starting Macquarie ETL on Wherobots...');
+  
+  try {
+    // Wait for container
+    log('Waiting for container...');
+    await waitKernelReady(base, headers);
+    log('Container ready.');
+    
+    // Start kernel
+    const kernel = await startKernel(base, headers);
+    const kernelId = kernel.id;
+    log(`Kernel started: ${kernelId}`);
+    
+    // Step 1: Environment setup
+    log('\n--- Step 1: Environment Setup ---');
+    const step1 = `%pip install --quiet geopandas pyproj requests pandas
+from sedona.spark import *
+spark = SedonaContext.create(SedonaContext.builder().getOrCreate())
+spark.sparkContext.setLogLevel("INFO")
+print("Sedona ready.")`;
+    
+    await executeCode(base, wsBase, kernelId, step1, headers);
+    
+    // Step 2: Load config
+    log('\n--- Step 2: Load Config ---');
+    const step2 = `import json, os
+from src.Ingestion.macquarie_spatial_ingest import _cfg, load_precinct_boundary
+
+cfg = _cfg()
+S3_BUCKET = cfg.get("storage_root", "wherobots://fgsdb/macquarie")
+TARGET_CRS = cfg.get("target_crs", "EPSG:7856")
+SOURCE_CRS = cfg.get("source_crs", "EPSG:4326")
+
+print(f"Storage root : {S3_BUCKET}")
+print(f"Source CRS   : {SOURCE_CRS}")
+print(f"Target CRS   : {TARGET_CRS}")
+print(f"Sub-precincts: {cfg['precinct']['sub_precincts']}")`;
+    
+    await executeCode(base, wsBase, kernelId, step2, headers);
+    
+    // Step 3: Load precinct boundary
+    log('\n--- Step 3: Load Precinct Boundary ---');
+    const step3 = `load_precinct_boundary(spark, S3_BUCKET)
+spark.table("org_catalog.fgsdb.macquarie_precinct_boundary").show(truncate=False)`;
+    
+    await executeCode(base, wsBase, kernelId, step3, headers);
+    
+    // Step 4: Ingest open data
+    log('\n--- Step 4: Ingest Open Data ---');
+    const step4 = `from src.Ingestion.macquarie_spatial_ingest import (
+    load_water_infrastructure,
+    load_biodiversity_constraints,
+    load_energy_infrastructure,
+    load_pipeline_corridors,
+    load_transport_networks,
+    load_abs_meshblocks,
+    build_net_developable_zones,
+    run_verification,
+)
+
+load_water_infrastructure(spark, S3_BUCKET, cfg)
+load_biodiversity_constraints(spark, S3_BUCKET, cfg)
+load_energy_infrastructure(spark, S3_BUCKET, cfg)
+load_pipeline_corridors(spark, S3_BUCKET, cfg)
+load_transport_networks(spark, S3_BUCKET, cfg)
+load_abs_meshblocks(spark, S3_BUCKET, cfg)
+print("Open-data layers ingested.")`;
+    
+    await executeCode(base, wsBase, kernelId, step4, headers);
+    
+    // Step 5: Build net developable zones
+    log('\n--- Step 5: Build Net Developable Zones ---');
+    const step5 = `build_net_developable_zones(spark, S3_BUCKET, cfg)
+
+zones_df = spark.table("org_catalog.fgsdb.macquarie_net_developable_zones")
+zones_df.selectExpr(
+    "precinct_key",
+    "ST_Area(net_developable_geom) / 1e4 AS developable_ha"
+).show(truncate=False)
+run_verification(spark)`;
+    
+    await executeCode(base, wsBase, kernelId, step5, headers);
+    
+    log('\n=== Macquarie ETL Complete ===', false);
+    
+    // Stop kernel
+    await stopKernel(base, kernelId, headers);
+    log('Kernel stopped.', false);
+    
+  } catch (err) {
+    log(`\nERROR: ${err.message}`, true);
+  }
+}
+</script>
+</body>
+</html>
