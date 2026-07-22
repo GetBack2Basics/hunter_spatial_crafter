@@ -401,21 +401,22 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
         FROM org_catalog.fgsdb.macquarie_precinct_boundary
     """)
 
+    # Assemble constraints with metric buffers where specified
     constraints = []
 
-    hydro = "SELECT 'hydro_30m' AS constraint_type, ST_Buffer(ST_Transform(geometry, 'EPSG:4326','EPSG:7856'), 30.0) AS geom FROM org_catalog.fgsdb.macquarie_water_hydrography"
+    hydro = f"SELECT 'hydro_30m' AS constraint_type, ST_Buffer(ST_Transform(geometry, '{src}','{target_crs}'), 30.0) AS geom FROM org_catalog.fgsdb.macquarie_water_hydrography"
     constraints.append(hydro)
 
-    bio = "SELECT 'biodiversity' AS constraint_type, ST_Transform(geometry, 'EPSG:4326','EPSG:7856') AS geom FROM org_catalog.fgsdb.macquarie_biodiversity_constraints"
+    bio = f"SELECT 'biodiversity' AS constraint_type, ST_Transform(geometry, '{src}','{target_crs}') AS geom FROM org_catalog.fgsdb.macquarie_biodiversity_constraints"
     constraints.append(bio)
 
     try:
-        pipe_q = "SELECT 'pipeline_20m' AS constraint_type, ST_Buffer(ST_Transform(geometry, 'EPSG:4326','EPSG:7856'), 20.0) AS geom FROM org_catalog.fgsdb.macquarie_pipeline_corridors"
+        pipe_q = f"SELECT 'pipeline_20m' AS constraint_type, ST_Buffer(ST_Transform(geometry, '{src}','{target_crs}'), 20.0) AS geom FROM org_catalog.fgsdb.macquarie_pipeline_corridors"
         constraints.append(pipe_q)
     except Exception:
         print("[macquarie] Pipeline constraints table missing; buffer step skipped.")
 
-    rail_q = "SELECT 'rail_10m' AS constraint_type, ST_Buffer(ST_Transform(geometry, 'EPSG:4326','EPSG:7856'), 10.0) AS geom FROM org_catalog.fgsdb.macquarie_rail_network"
+    rail_q = f"SELECT 'rail_10m' AS constraint_type, ST_Buffer(ST_Transform(geometry, '{src}','{target_crs}'), 10.0) AS geom FROM org_catalog.fgsdb.macquarie_rail_network"
     constraints.append(rail_q)
 
     unioned = " UNION ALL ".join(constraints)
