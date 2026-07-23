@@ -46,10 +46,15 @@ except ImportError:
 def _cfg() -> dict:
     env = os.getenv("WHEROBOTS_ENV", "dev")
     candidates = [
+        "/opt/wherobots/macquarie.json",
+        f"{env}.json",
+        f"macquarie.json",
         f"config/{env}.json",
         f"../config/{env}.json",
         f"../../config/{env}.json",
         os.path.join(os.path.dirname(os.path.abspath(__file__)), f"../../config/{env}.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{env}.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "macquarie.json"),
     ]
     for p in candidates:
         if os.path.exists(p):
@@ -193,16 +198,19 @@ def load_water_infrastructure(sedona: SedonaContext, storage_root: str, cfg: dic
 
     hydro_url = f"{cfg['data_sources']['nsw_seed']}/Hydrography_Watercourses/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
     print("[macquarie] Fetching NSW SEED Hydrography …")
-    resp = requests.get(hydro_url, timeout=30)
-    resp.raise_for_status()
-    tbl = gpd.GeoDataFrame.from_features(resp.json(), crs="EPSG:4326")
-    if tbl.empty:
-        print("[macquarie] WARNING: hydrography returned empty; skipping.")
-        return
-    gdf = tbl.to_crs(tgt)
-    hydro_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("seed_hydrography"))
-    save_table(sedona, hydro_sdf, "macquarie_water_hydrography", storage_root, partition_col=None)
-    print("[macquarie] Water infrastructure loaded.")
+    try:
+        resp = requests.get(hydro_url, timeout=30)
+        resp.raise_for_status()
+        tbl = gpd.GeoDataFrame.from_features(resp.json(), crs="EPSG:4326")
+        if tbl.empty:
+            print("[macquarie] WARNING: hydrography returned empty; skipping.")
+            return
+        gdf = tbl.to_crs(tgt)
+        hydro_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("seed_hydrography"))
+        save_table(sedona, hydro_sdf, "macquarie_water_hydrography", storage_root, partition_col=None)
+        print("[macquarie] Water infrastructure loaded.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load water infrastructure: {exc}")
 
 
 # =============================================================================
@@ -397,39 +405,70 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
     sedona.sql(f"""
         CREATE OR REPLACE TEMP VIEW precinct_transform AS
         SELECT precinct_key,
-               ST_Transform(geometry, '{src}', '{target_crs}') AS geom
+               geometry AS geom
         FROM org_catalog.fgsdb.macquarie_precinct_boundary
     """)
 
-    # Assemble constraints with metric buffers where specified
+    # Assemble constraints with metric buffers where specified if tables exist
     constraints = []
 
-    hydro = f"SELECT 'hydro_30m' AS constraint_type, ST_Buffer(ST_Transform(geometry, '{src}','{target_crs}'), 30.0) AS geom FROM org_catalog.fgsdb.macquarie_water_hydrography"
-    constraints.append(hydro)
+    if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_water_hydrography"):
+        hydro = f"""
+            SELECT 'hydro_30m' AS constraint_type, ST_Buffer(g.geometry, 30.0) AS geom 
+            FROM org_catalog.fgsdb.macquarie_water_hydrography g
+            JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
+        """
+        constraints.append(hydro)
+    else:
+        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_water_hydrography is missing; skipping water constraints.")
 
-    bio = f"SELECT 'biodiversity' AS constraint_type, ST_Transform(geometry, '{src}','{target_crs}') AS geom FROM org_catalog.fgsdb.macquarie_biodiversity_constraints"
-    constraints.append(bio)
+    if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_biodiversity_constraints"):
+        bio = f"""
+            SELECT 'biodiversity' AS constraint_type, g.geometry AS geom 
+            FROM org_catalog.fgsdb.macquarie_biodiversity_constraints g
+            JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
+        """
+        constraints.append(bio)
+    else:
+        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_biodiversity_constraints is missing; skipping biodiversity constraints.")
 
-    try:
-        pipe_q = f"SELECT 'pipeline_20m' AS constraint_type, ST_Buffer(ST_Transform(geometry, '{src}','{target_crs}'), 20.0) AS geom FROM org_catalog.fgsdb.macquarie_pipeline_corridors"
+    if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_pipeline_corridors"):
+        pipe_q = f"""
+            SELECT 'pipeline_20m' AS constraint_type, ST_Buffer(g.geometry, 20.0) AS geom 
+            FROM org_catalog.fgsdb.macquarie_pipeline_corridors g
+            JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
+        """
         constraints.append(pipe_q)
-    except Exception:
-        print("[macquarie] Pipeline constraints table missing; buffer step skipped.")
+    else:
+        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_pipeline_corridors is missing; skipping pipeline constraints.")
 
-    rail_q = f"SELECT 'rail_10m' AS constraint_type, ST_Buffer(ST_Transform(geometry, '{src}','{target_crs}'), 10.0) AS geom FROM org_catalog.fgsdb.macquarie_rail_network"
-    constraints.append(rail_q)
+    if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_rail_network"):
+        rail_q = f"""
+            SELECT 'rail_10m' AS constraint_type, ST_Buffer(g.geometry, 10.0) AS geom 
+            FROM org_catalog.fgsdb.macquarie_rail_network g
+            JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
+        """
+        constraints.append(rail_q)
+    else:
+        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_rail_network is missing; skipping rail constraints.")
 
-    unioned = " UNION ALL ".join(constraints)
-    sedona.sql(f"CREATE OR REPLACE TEMP VIEW constraints AS {unioned}")
-
-    net = sedona.sql(f"""
-        SELECT
-            p.precinct_key,
-            ST_Difference(p.geom, ST_Union_Aggregate(c.geom)) AS net_developable_geom
-        FROM precinct_transform p
-        LEFT JOIN constraints c ON ST_Intersects(p.geom, c.geom)
-        GROUP BY p.precinct_key, p.geom
-    """)
+    if constraints:
+        unioned = " UNION ALL ".join(constraints)
+        sedona.sql(f"CREATE OR REPLACE TEMP VIEW constraints AS {unioned}")
+        net = sedona.sql(f"""
+            SELECT
+                p.precinct_key,
+                ST_Difference(p.geom, ST_Union_Aggr(c.geom)) AS net_developable_geom
+            FROM precinct_transform p
+            LEFT JOIN constraints c ON ST_Intersects(p.geom, c.geom)
+            GROUP BY p.precinct_key, p.geom
+        """)
+    else:
+        print("[macquarie] Warning: No constraint tables available. Developable zones will equal precinct boundaries.")
+        net = sedona.sql("""
+            SELECT precinct_key, geom AS net_developable_geom
+            FROM precinct_transform
+        """)
     if "precinct" in net.columns:
         net = net.drop("precinct")
 
