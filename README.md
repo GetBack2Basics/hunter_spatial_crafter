@@ -15,5 +15,8 @@ The ETL pipeline builds constraint masks (water, biodiversity, pipelines, active
 ## Project Structure
 
 - `src/Ingestion/macquarie_spatial_ingest.py`: Core python script implementing the Sedona Spark spatial ETL.
+- `src/Analysis/national_suitability_analysis.py`: 5-Tier Spatial Constraint Model (Terrain Slope, Mine Subsidence, Flood Outfalls, Power Grid, and Water) to benchmark candidate sites nationally.
 - `config/macquarie.json`: Configuration settings, coordinate reference system (CRS) parameters, buffer thresholds, and data source endpoints.
-- `notebooks/Macquarie_Coal_Complex_Spatial_ETL.ipynb`: Interactive Jupyter Notebook outlining the spatial ETL steps and visualization.
+- `runner/macquarie_etl_runner.html`: A premium HTML runner UI with a vertical timeline, step status indicators, and millisecond-accurate execution timers.
+- `notebooks/Macquarie_Coal_Complex_Spatial_ETL.ipynb`: Interactive Jupyter Notebook outlining the local spatial ETL steps and visualization.
+- `notebooks/National_Siting_Dashboard.ipynb`: Interactive dashboard containing Kepler.gl suitability maps and multi-state/regional benchmarking matrices.

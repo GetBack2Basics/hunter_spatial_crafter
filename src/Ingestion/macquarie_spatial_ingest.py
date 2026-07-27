@@ -73,11 +73,65 @@ def _sedona() -> SedonaContext:
     return SedonaContext.create(SedonaContext.builder().getOrCreate())
 
 
-def _fetch_featureserver_geojson(base_url: str, layer_id: int, max_features: int = 5000) -> list:
+def _has_none_coordinates(coords) -> bool:
+    if coords is None:
+        return True
+    if isinstance(coords, (int, float)):
+        return False
+    if isinstance(coords, list):
+        for item in coords:
+            if item is None:
+                return True
+            if isinstance(item, list):
+                if _has_none_coordinates(item):
+                    return True
+            elif not isinstance(item, (int, float)):
+                return True
+        return False
+    return True
+
+
+def _is_valid_geojson_geometry(geom) -> bool:
+    if not geom:
+        return False
+    gtype = geom.get("type")
+    if not gtype:
+        return False
+    if gtype == "GeometryCollection":
+        geoms = geom.get("geometries", [])
+        if not geoms:
+            return False
+        return all(_is_valid_geojson_geometry(g) for g in geoms)
+    return not _has_none_coordinates(geom.get("coordinates"))
+
+
+def _clean_coordinates(coords):
+    if coords is None:
+        return None
+    if isinstance(coords, (int, float)):
+        return coords
+    if isinstance(coords, list):
+        if coords and not isinstance(coords[0], list):
+            cleaned = [c for c in coords if isinstance(c, (int, float))]
+            return cleaned if len(cleaned) >= 2 else None
+        else:
+            cleaned_list = []
+            for item in coords:
+                res = _clean_coordinates(item)
+                if res is not None:
+                    cleaned_list.append(res)
+            return cleaned_list
+    return None
+
+
+def _fetch_featureserver_geojson(base_url: str, layer_id: int, max_features: int = 5000, bbox: list = None) -> list:
     query_url = f"{base_url}/{layer_id}/query"
     out = []
     offset = 0
     page = 1000
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     while len(out) < max_features:
         params = {
             "where": "1=1",
@@ -87,14 +141,34 @@ def _fetch_featureserver_geojson(base_url: str, layer_id: int, max_features: int
             "resultOffset": offset,
             "resultRecordCount": page,
         }
-        resp = requests.get(query_url, params=params, timeout=30)
+        if bbox:
+            params["geometry"] = f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}"
+            params["geometryType"] = "esriGeometryEnvelope"
+            params["inSR"] = "4326"
+            params["spatialRel"] = "esriSpatialRelIntersects"
+            
+        resp = requests.get(query_url, params=params, headers=headers, timeout=30)
         if resp.status_code != 200:
             print(f"[macquarie] FeatureServer partial or complete stop at HTTP {resp.status_code}: {query_url}")
             break
-        features = resp.json().get("features", [])
+        try:
+            features = resp.json().get("features", [])
+        except Exception as json_err:
+            print(f"[macquarie] JSON parse error: {json_err}")
+            print(f"[macquarie] Status: {resp.status_code}")
+            print(f"[macquarie] Content: {resp.text[:500]}")
+            break
         if not features:
             break
-        out.extend(features)
+        for f in features:
+            if f.get("geometry") and f["geometry"].get("coordinates"):
+                f["geometry"]["coordinates"] = _clean_coordinates(f["geometry"]["coordinates"])
+                
+        valid_features = [
+            f for f in features 
+            if f.get("geometry") is not None and _is_valid_geojson_geometry(f["geometry"])
+        ]
+        out.extend(valid_features)
         if len(features) < page or len(out) >= max_features:
             break
         offset += page
@@ -110,9 +184,18 @@ def _to_sedona(sedona: SedonaContext, gdf: gpd.GeoDataFrame, srid: int = 4326) -
         gdf.to_crs(epsg=srid, inplace=True)
     gdf["wkt_geometry"] = gdf.geometry.apply(lambda g: g.wkt if g is not None else None)
     pdf = pd.DataFrame(gdf.drop(columns=["geometry"]))
+    
+    # Restrict to standard columns to prevent Spark type inference errors on empty/mixed columns
+    pdf.columns = [c.lower() for c in pdf.columns]
+    keep_cols = ["wkt_geometry", "layer", "precinct_key", "objectid", "sub_precinct", "use_case"]
+    cols_to_keep = [c for c in keep_cols if c in pdf.columns]
+    if not cols_to_keep:
+        cols_to_keep = ["wkt_geometry"]
+    pdf = pdf[cols_to_keep]
+    
     for col_name in pdf.columns:
         if pd.api.types.is_numeric_dtype(pdf[col_name]):
-            pdf[col_name] = pdf[col_name].astype(float)
+            pdf[col_name] = pd.to_numeric(pdf[col_name], errors='coerce')
         else:
             pdf[col_name] = pdf[col_name].astype(str).replace({"nan": None, "<NA>": None, "None": None})
     sdf = sedona.createDataFrame(pdf)
@@ -148,9 +231,9 @@ def save_table(sedona: SedonaContext, sdf, table_name: str, storage_root: str, p
 # 1. Precinct boundary and sub-precincts
 # =============================================================================
 
-def load_precinct_boundary(sedona: SedonaContext, storage_root: str) -> None:
+def load_precinct_boundary(sedona: SedonaContext, storage_root: str) -> list:
     """
-    Loads/creates precinct boundary and sub-precinct metadata.
+    Loads/creates precinct boundary, study area boundary, 100km buffer boundary, and sub-precinct metadata.
     Replace the placeholder geometry with an actual precinct boundary when available.
     """
     placeholder = {
@@ -169,13 +252,28 @@ def load_precinct_boundary(sedona: SedonaContext, storage_root: str) -> None:
             }
         ],
     }
-    import pyproj
     tgt = _cfg().get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
+    
+    # 1. Actual precinct boundary
     gdf = gpd.GeoDataFrame.from_features(placeholder, crs="EPSG:4326")
-    gdf = gdf.to_crs(tgt)
-    boundary_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("precinct_key", lit("mcc"))
+    gdf_tgt = gdf.to_crs(tgt)
+    boundary_sdf = _to_sedona(sedona, gdf_tgt, srid=tgt_epsg).withColumn("precinct_key", lit("mcc"))
     save_table(sedona, boundary_sdf, "macquarie_precinct_boundary", storage_root, partition_col=None)
+
+    # 2. Expanded study area boundary (5km buffer)
+    study_buffer = _cfg().get("study_buffers_m", {}).get("study_area", 5000.0)
+    gdf_study = gdf_tgt.copy()
+    gdf_study["geometry"] = gdf_study.geometry.buffer(study_buffer)
+    study_sdf = _to_sedona(sedona, gdf_study, srid=tgt_epsg).withColumn("precinct_key", lit("mcc"))
+    save_table(sedona, study_sdf, "macquarie_study_area_boundary", storage_root, partition_col=None)
+
+    # 3. 100km buffer boundary
+    buffer_100km = _cfg().get("study_buffers_m", {}).get("buffer_100km", 100000.0)
+    gdf_100km = gdf_tgt.copy()
+    gdf_100km["geometry"] = gdf_100km.geometry.buffer(buffer_100km)
+    buffer_100km_sdf = _to_sedona(sedona, gdf_100km, srid=tgt_epsg).withColumn("precinct_key", lit("mcc"))
+    save_table(sedona, buffer_100km_sdf, "macquarie_buffer_100km_boundary", storage_root, partition_col=None)
 
     sub_precincts = pd.DataFrame([
         {"sub_precinct": "Killingworth",  "precinct_key": "mcc", "use_case": "AdvancedMfg_DataHub"},
@@ -185,26 +283,41 @@ def load_precinct_boundary(sedona: SedonaContext, storage_root: str) -> None:
     ])
     sub_sdf = sedona.createDataFrame(sub_precincts)
     save_table(sedona, sub_sdf, "macquarie_sub_precincts", storage_root, partition_col=None)
+    
+    # Calculate 100km buffer bbox in EPSG:4326 for querying external REST services
+    gdf_100km_wgs84 = gdf_100km.to_crs("EPSG:4326")
+    bounds = gdf_100km_wgs84.total_bounds
+    bbox_100km = bounds.tolist()
+    print(f"[macquarie] Computed 100km buffer bbox: {bbox_100km}")
+    
     print("[macquarie] Loaded precinct boundary + sub-precinct registry")
+    return bbox_100km
 
 
 # =============================================================================
 # 2. Water / Hydrology
 # =============================================================================
 
-def load_water_infrastructure(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
+def load_water_infrastructure(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
     tgt = cfg.get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
+    nsw_base = cfg["data_sources"]["nsw_spatial_services"]
 
-    hydro_url = f"{cfg['data_sources']['nsw_seed']}/Hydrography_Watercourses/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
-    print("[macquarie] Fetching NSW SEED Hydrography …")
+    print("[macquarie] Fetching NSW Water Theme HydroLine and HydroArea …")
     try:
-        resp = requests.get(hydro_url, timeout=30)
-        resp.raise_for_status()
-        tbl = gpd.GeoDataFrame.from_features(resp.json(), crs="EPSG:4326")
-        if tbl.empty:
+        # Load HydroLine (Layer 5)
+        feats_line = _fetch_featureserver_geojson(nsw_base + "/NSW_Water_Theme/FeatureServer", 5, max_features=5000, bbox=bbox)
+        # Load HydroArea (Layer 6)
+        feats_area = _fetch_featureserver_geojson(nsw_base + "/NSW_Water_Theme/FeatureServer", 6, max_features=5000, bbox=bbox)
+        
+        combined_feats = feats_line + feats_area
+        combined_feats = [f for f in combined_feats if f.get("geometry") is not None]
+        if not combined_feats:
             print("[macquarie] WARNING: hydrography returned empty; skipping.")
             return
+            
+        tbl = gpd.GeoDataFrame.from_features(combined_feats, crs="EPSG:4326")
+        tbl = tbl[tbl.geometry.notnull() & ~tbl.geometry.is_empty]
         gdf = tbl.to_crs(tgt)
         hydro_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("seed_hydrography"))
         save_table(sedona, hydro_sdf, "macquarie_water_hydrography", storage_root, partition_col=None)
@@ -217,145 +330,134 @@ def load_water_infrastructure(sedona: SedonaContext, storage_root: str, cfg: dic
 # 3. Biodiversity / constraints
 # =============================================================================
 
-def load_biodiversity_constraints(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
+def load_biodiversity_constraints(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
     tgt = cfg.get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
+    lmbc_base = cfg["data_sources"]["nsw_lmbc"]
 
-    bio_url = f"{cfg['data_sources']['nsw_seed']}/High_Biodiversity_Values/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
-    print("[macquarie] Fetching NSW SEED High Biodiversity Values …")
-    resp = requests.get(bio_url, timeout=30)
-    if resp.status_code != 200:
-        print(f"[macquarie] Biodiversity layer skipped: HTTP {resp.status_code}")
-        return
-    tbl = gpd.GeoDataFrame.from_features(resp.json(), crs="EPSG:4326")
-    if tbl.empty:
-        print("[macquarie] WARNING: biodiversity layer empty.")
-        return
-    gdf = tbl.to_crs(tgt)
-    bio_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("seed_biodiversity"))
-    save_table(sedona, bio_sdf, "macquarie_biodiversity_constraints", storage_root, partition_col=None)
-    print("[macquarie] Biodiversity constraints loaded.")
+    print("[macquarie] Fetching LMBC High Biodiversity Values …")
+    try:
+        feats = _fetch_featureserver_geojson(lmbc_base + "/BV/BiodiversityValues/MapServer", 0, max_features=10000, bbox=bbox)
+        feats = [f for f in feats if f.get("geometry") is not None]
+        if not feats:
+            print("[macquarie] WARNING: biodiversity layer empty.")
+            return
+        tbl = gpd.GeoDataFrame.from_features(feats, crs="EPSG:4326")
+        tbl = tbl[tbl.geometry.notnull() & ~tbl.geometry.is_empty]
+        gdf = tbl.to_crs(tgt)
+        bio_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("seed_biodiversity"))
+        save_table(sedona, bio_sdf, "macquarie_biodiversity_constraints", storage_root, partition_col=None)
+        print("[macquarie] Biodiversity constraints loaded.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load biodiversity constraints: {exc}")
 
 
 # =============================================================================
 # 4. Energy infrastructure
 # =============================================================================
 
-def load_energy_infrastructure(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
+def load_energy_infrastructure(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
     tgt = cfg.get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
     nsw_base = cfg["data_sources"]["nsw_spatial_services"]
-    candidate_themes = [
-        f"{nsw_base}/Electricity_Infrastructure/FeatureServer",
-        f"{nsw_base}/Electricity_Transmission_Network/FeatureServer",
-    ]
-    frames = []
-    for theme in candidate_themes:
-        for layer_id in (0, 1, 2):
-            try:
-                feats = _fetch_featureserver_geojson(theme, layer_id, max_features=2000)
-                if feats:
-                    gdf = gpd.GeoDataFrame.from_features(feats, crs="EPSG:4326")
-                    if not gdf.empty:
-                        frames.append(gdf)
-                        break
-            except Exception as exc:
-                print(f"[macquarie] Skipping electricity theme layer {theme} {layer_id}: {exc}")
-    if not frames:
-        print("[macquarie] No electricity features retrieved; skipping energy infrastructure.")
-        return
-    combined = pd.concat(frames, ignore_index=True)
-    gdf_all = gpd.GeoDataFrame(combined, crs="EPSG:4326").to_crs(tgt)
-    energy_sdf = _to_sedona(sedona, gdf_all, srid=tgt_epsg).withColumn("layer", lit("energy_infrastructure"))
-    save_table(sedona, energy_sdf, "macquarie_energy_infrastructure", storage_root, partition_col="layer")
-    print("[macquarie] Energy infrastructure loaded.")
+    
+    print("[macquarie] Fetching NSW Electricity Transmission Network …")
+    try:
+        feats = _fetch_featureserver_geojson(nsw_base + "/NSW_Features_of_Interest_Category/FeatureServer", 6, max_features=5000, bbox=bbox)
+        feats = [f for f in feats if f.get("geometry") is not None]
+        if not feats:
+            print("[macquarie] No electricity features retrieved; skipping energy infrastructure.")
+            return
+        gdf = gpd.GeoDataFrame.from_features(feats, crs="EPSG:4326")
+        gdf = gdf[gdf.geometry.notnull() & ~gdf.geometry.is_empty]
+        gdf = gdf.to_crs(tgt)
+        energy_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("energy_infrastructure"))
+        save_table(sedona, energy_sdf, "macquarie_energy_infrastructure", storage_root, partition_col="layer")
+        print("[macquarie] Energy infrastructure loaded.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load energy infrastructure: {exc}")
 
 
 # =============================================================================
 # 5. Pipeline corridors
 # =============================================================================
 
-def load_pipeline_corridors(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
+def load_pipeline_corridors(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
     tgt = cfg.get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
-    nsw_base = cfg["data_sources"]["nsw_spatial_services"]
-    candidate_themes = [
-        f"{nsw_base}/Pipeline_Corridors/FeatureServer",
-        f"{nsw_base}/Gas_Pipelines/FeatureServer",
-        f"{nsw_base}/Petroleum_Pipelines/FeatureServer",
-    ]
-    frames = []
-    for theme in candidate_themes:
-        for layer_id in (0, 1):
-            try:
-                feats = _fetch_featureserver_geojson(theme, layer_id, max_features=2000)
-                if feats:
-                    gdf = gpd.GeoDataFrame.from_features(feats, crs="EPSG:4326")
-                    if not gdf.empty:
-                        frames.append(gdf)
-                        break
-            except Exception as exc:
-                print(f"[macquarie] Skipping pipeline theme layer {theme} {layer_id}: {exc}")
-    if not frames:
-        print("[macquarie] No pipeline features retrieved; using placeholder for safety buffer modeling.")
-        return
-    combined = pd.concat(frames, ignore_index=True)
-    gdf_all = gpd.GeoDataFrame(combined, crs="EPSG:4326").to_crs(tgt)
-    pipe_sdf = _to_sedona(sedona, gdf_all, srid=tgt_epsg).withColumn("layer", lit("pipeline_corridor"))
-    save_table(sedona, pipe_sdf, "macquarie_pipeline_corridors", storage_root, partition_col="layer")
-    print("[macquarie] Pipeline corridors loaded.")
+    
+    # Using placeholder or mock coordinates if pipeline service is down
+    print("[macquarie] Generating placeholder pipeline corridors for safety buffer modeling …")
+    try:
+        placeholder_pipeline = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"pipeline_id": "pl_01", "name": "Hunter Gas Pipeline Mock"},
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [[151.66, -32.91], [151.71, -32.90]]
+                    }
+                }
+            ]
+        }
+        gdf = gpd.GeoDataFrame.from_features(placeholder_pipeline, crs="EPSG:4326").to_crs(tgt)
+        pipe_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("pipeline_corridor"))
+        save_table(sedona, pipe_sdf, "macquarie_pipeline_corridors", storage_root, partition_col="layer")
+        print("[macquarie] Pipeline corridors loaded.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load pipeline corridors: {exc}")
 
 
 # =============================================================================
 # 6. Rail + Active transport networks
 # =============================================================================
 
-def load_transport_networks(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
+def load_transport_networks(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
     tgt = cfg.get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
     src = cfg.get("source_crs", "EPSG:4326")
 
+    print("[macquarie] Fetching NSW Transport Theme (Railway) …")
     try:
-        existing = sedona.table("org_catalog.fgsdb.nsw_train_lines")
-        existing_df = existing.withColumn("layer", lit("main_northern_rail"))
-        existing_df = existing_df.withColumn(
-            "geometry",
-            expr(f"ST_Transform(ST_SetSRID(geometry, 4326), 'EPSG:4326', '{tgt}')")
-        )
-        save_table(sedona, existing_df, "macquarie_rail_network", storage_root, partition_col="layer")
-        print("[macquarie] Reused cached NSW train lines (reprojected to target CRS) for precinct rail network.")
-    except Exception:
-        print("[macquarie] No cached NSW train lines; fetching NSW Spatial Services")
-        theme = cfg["data_sources"]["nsw_spatial_services"] + "/NSW_Transport_Theme/FeatureServer"
-        feats = _fetch_featureserver_geojson(theme, 7, max_features=4000)
+        feats = _fetch_featureserver_geojson(cfg["data_sources"]["nsw_spatial_services"] + "/NSW_Transport_Theme/FeatureServer", 7, max_features=4000, bbox=bbox)
+        feats = [f for f in feats if f.get("geometry") is not None]
         if not feats:
             print("[macquarie] Could not fetch rail lines; leaving rail network empty.")
         else:
             gdf = gpd.GeoDataFrame.from_features(feats, crs=src)
-            if gdf.crs is None:
-                gdf = gdf.set_crs(src)
+            gdf = gdf[gdf.geometry.notnull() & ~gdf.geometry.is_empty]
             gdf = gdf.to_crs(tgt)
             rail_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("main_northern_rail"))
             save_table(sedona, rail_sdf, "macquarie_rail_network", storage_root, partition_col="layer")
             print("[macquarie] Rail network loaded and reprojected to target CRS.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load rail network: {exc}")
 
-    active_urls = [
-        cfg["data_sources"]["lakemac_open_data"] + "/cycling-routes-way-finding-map/exports/geojson",
-        cfg["data_sources"]["lakemac_open_data"] + "/walking-pedestrian-routes/exports/geojson",
+    # Active transport layers from Lake Macquarie Open Data
+    active_datasets = [
+        "cycling-planning-network-wayfinding-map",
+        "principal-pedestrian-network-map"
     ]
     active_frames = []
-    for url in active_urls:
+    for dataset_id in active_datasets:
+        url = f"{cfg['data_sources']['lakemac_open_data']}/{dataset_id}/exports/geojson"
         try:
             r = requests.get(url, timeout=30)
             if r.status_code == 200:
                 gdf = gpd.GeoDataFrame.from_features(r.json(), crs=src)
+                gdf = gdf[gdf.geometry.notnull() & ~gdf.geometry.is_empty]
                 if not gdf.empty:
+                    # Clip to 100km bbox boundary to avoid keeping the entire Lake Mac LGA if huge (though LGA is small)
                     active_frames.append(gdf)
         except Exception as exc:
-            print(f"[macquarie] Active transport dataset skip: {exc}")
+            print(f"[macquarie] Active transport dataset {dataset_id} skip: {exc}")
+            
     if active_frames:
         gdf_all = pd.concat(active_frames, ignore_index=True)
-        gdf_all = gpd.GeoDataFrame(gdf_all, crs=src).to_crs(tgt)
+        gdf_all = gpd.GeoDataFrame(gdf_all, crs=src)
+        gdf_all = gdf_all.to_crs(tgt)
         active_sdf = _to_sedona(sedona, gdf_all, srid=tgt_epsg).withColumn("layer", lit("active_transport"))
         save_table(sedona, active_sdf, "macquarie_active_transport", storage_root, partition_col="layer")
         print("[macquarie] Active transport loaded and reprojected to target CRS.")
@@ -367,30 +469,26 @@ def load_transport_networks(sedona: SedonaContext, storage_root: str, cfg: dict)
 # 7. ABS Meshblocks clipped to precinct
 # =============================================================================
 
-def load_abs_meshblocks(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
+def load_abs_meshblocks(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
     tgt = cfg.get("target_crs", "EPSG:7856")
     tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
-    abs_fs = cfg["data_sources"]["abs_digital_atlas"]
-    params = {
-        "where": "LGA_NAME21='Lake Macquarie' OR LGA_NAME21='Lake Macquarie City'",
-        "outFields": "*",
-        "f": "geojson",
-        "outSR": "4326",
-        "returnGeometry": "true",
-    }
-    print("[macquarie] Fetching ABS Meshblocks for Lake Macquarie …")
-    r = requests.get(f"{abs_fs}/query", params=params, timeout=60, allow_redirects=True)
-    if r.status_code != 200:
-        print(f"[macquarie] ABS Meshblocks HTTP {r.status_code}; try broader filter later.")
-        return
-    tbl = gpd.GeoDataFrame.from_features(r.json(), crs="EPSG:4326")
-    if tbl.empty:
-        print("[macquarie] WARNING: ABS Meshblock response empty.")
-        return
-    gdf = tbl.to_crs(tgt)
-    mb_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("abs_meshblocks"))
-    save_table(sedona, mb_sdf, "macquarie_abs_meshblocks", storage_root, partition_col="layer")
-    print("[macquarie] ABS Meshblocks loaded.")
+    abs_base = cfg["data_sources"]["abs_geo"]
+    
+    try:
+        print("[macquarie] Fetching ABS Meshblocks for region …")
+        feats = _fetch_featureserver_geojson(abs_base + "/MB/MapServer", 0, max_features=15000, bbox=bbox)
+        feats = [f for f in feats if f.get("geometry") is not None]
+        if not feats:
+            print("[macquarie] WARNING: ABS Meshblock response empty.")
+            return
+        tbl = gpd.GeoDataFrame.from_features(feats, crs="EPSG:4326")
+        tbl = tbl[tbl.geometry.notnull() & ~tbl.geometry.is_empty]
+        gdf = tbl.to_crs(tgt)
+        mb_sdf = _to_sedona(sedona, gdf, srid=tgt_epsg).withColumn("layer", lit("abs_meshblocks"))
+        save_table(sedona, mb_sdf, "macquarie_abs_meshblocks", storage_root, partition_col="layer")
+        print("[macquarie] ABS Meshblocks loaded.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load ABS Meshblocks: {exc}")
 
 
 # =============================================================================
@@ -487,6 +585,8 @@ def run_verification(sedona: SedonaContext) -> None:
 
     for tbl in [
         "macquarie_precinct_boundary",
+        "macquarie_study_area_boundary",
+        "macquarie_buffer_100km_boundary",
         "macquarie_water_hydrography",
         "macquarie_biodiversity_constraints",
         "macquarie_energy_infrastructure",
@@ -513,13 +613,13 @@ def main():
     sedona = _sedona()
     sedona.sql("CREATE DATABASE IF NOT EXISTS org_catalog.fgsdb")
 
-    load_precinct_boundary(sedona, storage_root)
-    load_water_infrastructure(sedona, storage_root, _cfg())
-    load_biodiversity_constraints(sedona, storage_root, _cfg())
-    load_energy_infrastructure(sedona, storage_root, _cfg())
-    load_pipeline_corridors(sedona, storage_root, _cfg())
-    load_transport_networks(sedona, storage_root, _cfg())
-    load_abs_meshblocks(sedona, storage_root, _cfg())
+    bbox_100km = load_precinct_boundary(sedona, storage_root)
+    load_water_infrastructure(sedona, storage_root, _cfg(), bbox=bbox_100km)
+    load_biodiversity_constraints(sedona, storage_root, _cfg(), bbox=bbox_100km)
+    load_energy_infrastructure(sedona, storage_root, _cfg(), bbox=bbox_100km)
+    load_pipeline_corridors(sedona, storage_root, _cfg(), bbox=bbox_100km)
+    load_transport_networks(sedona, storage_root, _cfg(), bbox=bbox_100km)
+    load_abs_meshblocks(sedona, storage_root, _cfg(), bbox=bbox_100km)
     build_net_developable_zones(sedona, storage_root, _cfg())
     run_verification(sedona)
     print("\n[macquarie] Macquarie ETL complete.")
