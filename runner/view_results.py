@@ -1,7 +1,10 @@
 import sys
+import os
+from dotenv import load_dotenv
 from wherobots.db import connect
 
-API_KEY = "wbk_user_0ccdpe9bdefvydj9vlj5mf4gx1vi7nbbm03lk4ntes8kebqe6okm78edmc50b9vo"
+load_dotenv()
+API_KEY = os.getenv("WHEROBOTS_API_KEY")
 
 def main():
     sys.stdout.reconfigure(encoding='utf-8')

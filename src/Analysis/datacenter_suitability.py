@@ -25,6 +25,8 @@ def df_to_gdf(df, geom_col="geometry"):
     return gdf
 
 def score_power(dist):
+    if dist is None or pd.isna(dist):
+        return 0.0
     # Closer to high-voltage lines is better (ideal < 250m)
     if dist <= 250:
         return 100.0
@@ -63,9 +65,10 @@ def main():
     power_dist_df = spark.sql("""
         SELECT 
             z.precinct_key,
-            MIN(ST_Distance(z.net_developable_geom, ST_Transform(e.geometry, 'EPSG:4326', 'EPSG:7856'))) AS dist_to_power_m
+            MIN(ST_Distance(z.net_developable_geom, e.geometry)) AS dist_to_power_m
         FROM org_catalog.fgsdb.macquarie_net_developable_zones z
-        CROSS JOIN org_catalog.fgsdb.macquarie_energy_infrastructure e
+        LEFT JOIN org_catalog.fgsdb.macquarie_energy_infrastructure e
+          ON ST_DWithin(z.net_developable_geom, e.geometry, 2000.0)
         GROUP BY z.precinct_key
     """).toPandas()
     
@@ -75,7 +78,8 @@ def main():
             z.precinct_key,
             MIN(ST_Distance(z.net_developable_geom, r.geometry)) AS dist_to_rail_m
         FROM org_catalog.fgsdb.macquarie_net_developable_zones z
-        CROSS JOIN org_catalog.fgsdb.macquarie_rail_network r
+        LEFT JOIN org_catalog.fgsdb.macquarie_rail_network r
+          ON ST_DWithin(z.net_developable_geom, r.geometry, 20000.0)
         GROUP BY z.precinct_key
     """).toPandas()
     

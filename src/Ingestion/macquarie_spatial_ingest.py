@@ -15,29 +15,14 @@ Source CRS: EPSG:4326  WGS84                   — GeoJSON / SEED native
 
 import os
 import sys
-
-if __package__ is None or __package__ == "":
-    import subprocess
-    for pkg in ["requests", "pandas", "geopandas", "pyproj"]:
-        try:
-            __import__(pkg)
-        except ImportError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", pkg])
-
 import json
 import requests
 import pandas as pd
 import geopandas as gpd
+import pyproj
 
 from sedona.spark import SedonaContext
 from pyspark.sql.functions import col, to_json, expr, lit, when, concat_ws
-
-try:
-    import pyproj
-except ImportError:
-    import subprocess, sys as _sys
-    subprocess.check_call([_sys.executable, "-m", "pip", "install", "--quiet", "pyproj"])
-    import pyproj
 
 # =============================================================================
 # Utilities

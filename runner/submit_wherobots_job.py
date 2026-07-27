@@ -1,13 +1,18 @@
 import os
+import sys
+from dotenv import load_dotenv
 from wherobots import WherobotsJob
 
-API_KEY = "wbk_user_0ccdpe9bdefvydj9vlj5mf4gx1vi7nbbm03lk4ntes8kebqe6okm78edmc50b9vo"
+load_dotenv()
+sys.stdout.reconfigure(encoding='utf-8')
+API_KEY = os.getenv("WHEROBOTS_API_KEY")
 
 def main():
     print("Initializing Wherobots Job submission...")
     
     # Declare dependencies
     config_dep = WherobotsJob.add_file_dependency("config/macquarie.json")
+    requests_dep = WherobotsJob.add_pypi_dependency("requests", "2.31.0")
     
     # Initialize job
     job = WherobotsJob(
@@ -15,7 +20,7 @@ def main():
         name="macquarie-spatial-etl",
         runtime="tiny",
         api_key=API_KEY,
-        dependencies=[config_dep],
+        dependencies=[config_dep, requests_dep],
     )
     
     # Submit job
