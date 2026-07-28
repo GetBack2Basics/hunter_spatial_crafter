@@ -689,13 +689,13 @@ def to_geojson_feature(wkt_str, properties=None):
         return None
 
 def main():
-    print("Connecting to Wherobots Spatial SQL API...")
+    print("[1/8] Connecting to Wherobots Spatial SQL API...")
     try:
         conn = connect(api_key=API_KEY)
         cursor = conn.cursor()
         
         # 1. Fetching local Macquarie Precinct Constraint & Planning Layers
-        print("Fetching local Macquarie precinct vector layers...")
+        print("[2/8] Fetching local Macquarie precinct boundary...")
         
         # Precinct Boundary
         cursor.execute("SELECT precinct_key, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_precinct_boundary")
@@ -705,6 +705,7 @@ def main():
             f = to_geojson_feature(row.iloc[1], {"precinct_key": row.iloc[0]})
             if f: precinct_features.append(f)
             
+        print("[3/8] Fetching net developable zones...")
         # Net Developable Zones
         cursor.execute("SELECT precinct_key, ST_AsText(ST_Transform(ST_SetSRID(net_developable_geom, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_net_developable_zones")
         df_ndz = cursor.fetchall()
@@ -713,28 +714,31 @@ def main():
             f = to_geojson_feature(row.iloc[1], {"precinct_key": row.iloc[0]})
             if f: net_dev_features.append(f)
 
+        print("[4/8] Fetching pipeline corridors...")
         # Pipelines
-        cursor.execute("SELECT objectid, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_pipeline_corridors")
+        cursor.execute("SELECT layer, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_pipeline_corridors")
         df_pipe = cursor.fetchall()
         pipeline_features = []
-        for _, row in df_pipe.iterrows():
-            f = to_geojson_feature(row.iloc[1], {"objectid": int(row.iloc[0])})
+        for idx, row in df_pipe.iterrows():
+            f = to_geojson_feature(row.iloc[1], {"objectid": idx, "layer": str(row.iloc[0])})
             if f: pipeline_features.append(f)
 
+        print("[5/8] Fetching rail network...")
         # Rail
-        cursor.execute("SELECT objectid, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_rail_network")
+        cursor.execute("SELECT objectid, layer, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_rail_network")
         df_rail = cursor.fetchall()
         rail_features = []
         for _, row in df_rail.iterrows():
-            f = to_geojson_feature(row.iloc[1], {"objectid": int(row.iloc[0])})
+            f = to_geojson_feature(row.iloc[2], {"objectid": int(row.iloc[0]) if row.iloc[0] is not None else None, "layer": str(row.iloc[1])})
             if f: rail_features.append(f)
 
-        # Biodiversity (Unioned)
-        cursor.execute("SELECT ST_AsText(ST_Transform(ST_SetSRID(ST_Union_Aggr(geometry), 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_biodiversity_constraints")
+        print("[6/8] Fetching biodiversity constraints (LIMIT 150)...")
+        # Biodiversity
+        cursor.execute("SELECT layer, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_biodiversity_constraints LIMIT 150")
         df_bio = cursor.fetchall()
         bio_features = []
         for _, row in df_bio.iterrows():
-            f = to_geojson_feature(row.iloc[0], {"type": "biodiversity"})
+            f = to_geojson_feature(row.iloc[1], {"layer": str(row.iloc[0])})
             if f: bio_features.append(f)
 
         precinct_geojson = {"type": "FeatureCollection", "features": precinct_features}
@@ -744,7 +748,7 @@ def main():
         biodiversity_geojson = {"type": "FeatureCollection", "features": bio_features}
 
         # 2. Execute main spatial suitability query
-        print("Executing main spatial suitability aggregation in a single query...")
+        print("[7/8] Executing main spatial suitability aggregation in a single query...")
         cursor.execute("""
             WITH simulated_meshblocks AS (
                 SELECT 
@@ -997,6 +1001,7 @@ def main():
         region_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
 
         # Generate HTML content by injecting JSON
+        print("[8/8] Generating HTML content and writing interactive dashboard...")
         html_content = HTML_TEMPLATE
         html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
         html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
