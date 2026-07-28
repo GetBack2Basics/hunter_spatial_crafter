@@ -6,6 +6,8 @@ import traceback
 import pandas as pd
 from dotenv import load_dotenv
 from wherobots.db import connect
+from shapely import wkt
+from shapely.geometry import mapping
 
 # Load environment
 load_dotenv()
@@ -430,6 +432,13 @@ const candidatesData = {{ CANDIDATES_JSON }};
 const stateData = {{ STATE_JSON }};
 const regionData = {{ REGION_JSON }};
 
+// Local Macquarie Precinct constraints layers injected by python builder
+const precinctBoundaryGeoJSON = {{ PRECINCT_BOUNDARY_JSON }};
+const netDevelopableZonesGeoJSON = {{ NET_DEVELOPABLE_JSON }};
+const pipelineCorridorsGeoJSON = {{ PIPELINES_JSON }};
+const railNetworkGeoJSON = {{ RAIL_NETWORK_JSON }};
+const biodiversityConstraintsGeoJSON = {{ BIODIVERSITY_JSON }};
+
 // Initialize Dashboard Metrics
 document.getElementById('stat-total').textContent = candidatesData.length;
 const statesSet = new Set(candidatesData.map(c => c.state_name));
@@ -439,7 +448,7 @@ if (candidatesData.length > 0) {
 }
 
 // Leaflet Map Initialization
-const map = L.map('map').setView([-28.0, 133.0], 4);
+const map = L.map('map').setView([-32.95, 151.35], 12); // Centered on Macquarie Coal Complex by default
 
 // Basemaps
 const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -476,6 +485,27 @@ const gaWater = L.tileLayer.wms('https://services.ga.gov.au/gis/services/Nationa
   attribution: 'Geoscience Australia'
 });
 
+// Create Local Vector Layers group
+const localPrecinctBoundary = L.geoJSON(precinctBoundaryGeoJSON, {
+  style: { color: "#3b82f6", weight: 3, fillOpacity: 0.03, dashArray: "5, 5" }
+}).addTo(map);
+
+const localNetDevelopable = L.geoJSON(netDevelopableZonesGeoJSON, {
+  style: { color: "#10b981", weight: 2, fillColor: "#10b981", fillOpacity: 0.25 }
+}).addTo(map);
+
+const localPipelines = L.geoJSON(pipelineCorridorsGeoJSON, {
+  style: { color: "#fbbf24", weight: 3, opacity: 0.85 }
+}).addTo(map);
+
+const localRail = L.geoJSON(railNetworkGeoJSON, {
+  style: { color: "#6b7280", weight: 3, opacity: 0.9 }
+}).addTo(map);
+
+const localBiodiversity = L.geoJSON(biodiversityConstraintsGeoJSON, {
+  style: { color: "#ef4444", weight: 0.5, fillColor: "#ef4444", fillOpacity: 0.15 }
+}).addTo(map);
+
 // Add Layer Control
 const baseLayers = {
   "OpenStreetMap": osm,
@@ -485,7 +515,12 @@ const baseLayers = {
 const overlays = {
   "GA National Topography": gaTopo,
   "GA Power Grid (WMS)": gaElectricity,
-  "GA Surface Water (WMS)": gaWater
+  "GA Surface Water (WMS)": gaWater,
+  "Macquarie Precinct Boundary": localPrecinctBoundary,
+  "Macquarie Net Developable": localNetDevelopable,
+  "Macquarie Pipeline Corridors": localPipelines,
+  "Macquarie Rail Network": localRail,
+  "Macquarie Bio Constraints": localBiodiversity
 };
 
 L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
@@ -509,7 +544,6 @@ candidatesData.forEach((c, index) => {
     lon = parseFloat(coords[0]);
     lat = parseFloat(coords[1]);
   } else {
-    // If it's a polygon (Macquarie), use its centroid or parse coords
     // Macquarie Coal Complex sits around -32.95, 151.35
     lat = -32.95;
     lon = 151.35;
@@ -568,11 +602,13 @@ candidatesData.forEach(c => {
         const coords = c.geometry.replace('POINT(', '').replace(')', '').split(' ');
         lon = parseFloat(coords[0]);
         lat = parseFloat(coords[1]);
+        map.setView([lat, lon], 11);
       } else {
+        // Macquarie polygon - zoom into local constraints view!
         lat = -32.95;
         lon = 151.35;
+        map.setView([lat, lon], 14);
       }
-      map.setView([lat, lon], 11);
       marker.openPopup();
     }
   });
@@ -639,12 +675,75 @@ legend.addTo(map);
 </html>
 """
 
+def to_geojson_feature(wkt_str, properties=None):
+    if not wkt_str:
+        return None
+    try:
+        geom = wkt.loads(wkt_str)
+        return {
+            "type": "Feature",
+            "geometry": mapping(geom),
+            "properties": properties or {}
+        }
+    except Exception as e:
+        return None
+
 def main():
     print("Connecting to Wherobots Spatial SQL API...")
     try:
         conn = connect(api_key=API_KEY)
         cursor = conn.cursor()
         
+        # 1. Fetching local Macquarie Precinct Constraint & Planning Layers
+        print("Fetching local Macquarie precinct vector layers...")
+        
+        # Precinct Boundary
+        cursor.execute("SELECT precinct_key, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_precinct_boundary")
+        df_prec = cursor.fetchall()
+        precinct_features = []
+        for _, row in df_prec.iterrows():
+            f = to_geojson_feature(row.iloc[1], {"precinct_key": row.iloc[0]})
+            if f: precinct_features.append(f)
+            
+        # Net Developable Zones
+        cursor.execute("SELECT precinct_key, ST_AsText(ST_Transform(ST_SetSRID(net_developable_geom, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_net_developable_zones")
+        df_ndz = cursor.fetchall()
+        net_dev_features = []
+        for _, row in df_ndz.iterrows():
+            f = to_geojson_feature(row.iloc[1], {"precinct_key": row.iloc[0]})
+            if f: net_dev_features.append(f)
+
+        # Pipelines
+        cursor.execute("SELECT objectid, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_pipeline_corridors")
+        df_pipe = cursor.fetchall()
+        pipeline_features = []
+        for _, row in df_pipe.iterrows():
+            f = to_geojson_feature(row.iloc[1], {"objectid": int(row.iloc[0])})
+            if f: pipeline_features.append(f)
+
+        # Rail
+        cursor.execute("SELECT objectid, ST_AsText(ST_Transform(ST_SetSRID(geometry, 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_rail_network")
+        df_rail = cursor.fetchall()
+        rail_features = []
+        for _, row in df_rail.iterrows():
+            f = to_geojson_feature(row.iloc[1], {"objectid": int(row.iloc[0])})
+            if f: rail_features.append(f)
+
+        # Biodiversity (Unioned)
+        cursor.execute("SELECT ST_AsText(ST_Transform(ST_SetSRID(ST_Union_Aggr(geometry), 7856), 'EPSG:4326')) FROM org_catalog.fgsdb.macquarie_biodiversity_constraints")
+        df_bio = cursor.fetchall()
+        bio_features = []
+        for _, row in df_bio.iterrows():
+            f = to_geojson_feature(row.iloc[0], {"type": "biodiversity"})
+            if f: bio_features.append(f)
+
+        precinct_geojson = {"type": "FeatureCollection", "features": precinct_features}
+        net_developable_geojson = {"type": "FeatureCollection", "features": net_dev_features}
+        pipelines_geojson = {"type": "FeatureCollection", "features": pipeline_features}
+        rail_geojson = {"type": "FeatureCollection", "features": rail_features}
+        biodiversity_geojson = {"type": "FeatureCollection", "features": bio_features}
+
+        # 2. Execute main spatial suitability query
         print("Executing main spatial suitability aggregation in a single query...")
         cursor.execute("""
             WITH simulated_meshblocks AS (
@@ -902,6 +1001,13 @@ def main():
         html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
         html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
         html_content = html_content.replace("{{ REGION_JSON }}", json.dumps(region_list))
+        
+        # Inject local geojson layers
+        html_content = html_content.replace("{{ PRECINCT_BOUNDARY_JSON }}", json.dumps(precinct_geojson))
+        html_content = html_content.replace("{{ NET_DEVELOPABLE_JSON }}", json.dumps(net_developable_geojson))
+        html_content = html_content.replace("{{ PIPELINES_JSON }}", json.dumps(pipelines_geojson))
+        html_content = html_content.replace("{{ RAIL_NETWORK_JSON }}", json.dumps(rail_geojson))
+        html_content = html_content.replace("{{ BIODIVERSITY_JSON }}", json.dumps(biodiversity_geojson))
 
         output_html = "runner/national_suitability_report.html"
         abs_output_html = os.path.abspath(output_html)
