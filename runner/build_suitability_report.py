@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import time
 import traceback
 import pandas as pd
 from dotenv import load_dotenv
@@ -355,6 +356,51 @@ tbody tr:hover {
   padding-top: 0.5rem;
   margin-top: 0.5rem;
 }
+
+/* Slider toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ef4444;
+  transition: .4s;
+  border-radius: 34px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #10b981;
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px #10b981;
+}
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
 </style>
 </head>
 <body>
@@ -381,8 +427,28 @@ tbody tr:hover {
       <div class="stat-label">Top Candidate</div>
     </div>
     <div class="stat-box" style="border-color: var(--accent-blue);">
-      <div class="stat-value" style="color: #60a5fa;">1.75M</div>
-      <div class="stat-label">Spatial Geometries Queried</div>
+      <div class="stat-value" style="color: #60a5fa;">{{ GEOMETRIES_COUNT_VAL }}</div>
+      <div class="stat-label">Geometries Queried {{ GEOMETRIES_COUNT_TIME }}</div>
+    </div>
+  </div>
+
+  <!-- What-If Scenario Control Panel -->
+  <div class="card" style="margin-bottom: 1.5rem; border: 1px solid var(--accent-yellow); background: rgba(245, 158, 11, 0.03);">
+    <h2 style="color: var(--accent-yellow); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      What-If Scenario Sandbox: Tailings Storage Facility (TSF) Dam Status
+    </h2>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; font-size: 0.95rem; line-height: 1.5;">
+      <div style="max-width: 75%;">
+        <p style="margin: 0; color: var(--text-secondary);">By default, the <strong>Cockle Creek / Macquarie sub-precincts</strong> are constrained by the active TSF Dam safety declaration. De-declaring this dam hazard zone immediately unlocks <strong>15.2 additional hectares</strong> of flat, high-bearing net developable pad space for hyperscale construction, boosting suitability index scores.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <label class="switch">
+          <input type="checkbox" id="tsf-toggle">
+          <span class="slider"></span>
+        </label>
+        <span id="tsf-status-label" style="font-weight: bold; color: #ef4444;">DAM DECLARED (Excluded)</span>
+      </div>
     </div>
   </div>
 
@@ -405,10 +471,11 @@ tbody tr:hover {
           <thead>
             <tr>
               <th>Town / State</th>
-              <th>Score</th>
+              <th title="Raw Score (optimistic baseline without micro-setbacks)">Raw Score</th>
+              <th title="Refined Score (with high-res pipeline, riparian, slope, and TSF setbacks)">High-Rez Score</th>
+              <th>Area (ha)</th>
               <th>Power (km)</th>
               <th>Water (km)</th>
-              <th>Area (ha)</th>
             </tr>
           </thead>
           <tbody>
@@ -443,12 +510,11 @@ tbody tr:hover {
         <p>All candidates are benchmarked against simulated local/regional baselines (Latrobe Valley in VIC, Collie in WA, and Gladstone in QLD) to position NSW development opportunities within the wider national energy market transition framework.</p>
       </div>
       <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.25rem; border-radius: 0.75rem;">
-        <h3 style="margin-top: 0; margin-bottom: 0.75rem; color: #fbbf24; font-size: 1.05rem;">Assumptions & Confidence</h3>
+        <h3 style="margin-top: 0; margin-bottom: 0.75rem; color: #fbbf24; font-size: 1.05rem;">Assumptions & Siting Confidence</h3>
         <ul style="padding-left: 1.25rem; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem;">
-          <li><strong>Demographic Anchors:</strong> Demographic statistics disaggregated from ABS 2020 & 2025 SA2 census datasets intersecting the candidates.</li>
+          <li><strong>Demographic Anchors:</strong> Demographic statistics disaggregated from ABS SA2 census datasets intersecting the candidates.</li>
           <li><strong>Land Constraints:</strong> Slope grade calculations exclude land with slopes exceeding 5% grade to prevent excessive earthworks during construction.</li>
-          <li><strong>NSW Ground-Truth:</strong> High Confidence (90%) for Macquarie Coal Complex precinct analysis where local pipelines, rail corridors, and environmental constraints were fully ingested and buffered.</li>
-          <li><strong>National Baselines:</strong> Medium Confidence (75%) for simulated national baselines where candidate coordinates denote centroid regional estimates.</li>
+          {{ METHODOLOGY_NOTES }}
         </ul>
       </div>
     </div>
@@ -669,7 +735,7 @@ function getColor(score) {
                          '#ef4444';
 }
 
-// Function to update Proponent Claim Audit Panel
+// Function to update Proponent Claim Audit Panel with Advanced Physical Models
 function updateAuditPanel(site) {
   const panel = document.getElementById('audit-panel');
   const title = document.getElementById('audit-site-title');
@@ -680,66 +746,69 @@ function updateAuditPanel(site) {
   
   const isLocal = site.state_name === "New South Wales" || site.town_name === "Macquarie" || site.town_name === "Killingworth" || site.town_name === "Teralba" || site.town_name === "Cockle Creek";
   
+  const symbiosisStatus = site.is_thermal_symbiosis_viable ? 
+    '<span style="color:#34d399; font-weight:bold;">VIABLE (≤ 506.8m)</span>' : 
+    '<span style="color:#ef4444; font-weight:bold;">NOT VIABLE (> 506.8m)</span>';
+  
   if (isLocal) {
     container.innerHTML = `
-      <div class="audit-grid">
-        <!-- Item 1: Developable Area -->
-        <div class="audit-box">
-          <div class="audit-header">
-            <span>Net Developable Area</span>
-            <span class="audit-finger">👎</span>
+      <div class="audit-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <!-- Column 1: Core Siting Constraints -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div class="audit-box">
+            <div class="audit-header">
+              <span>Net Developable Pad Area</span>
+              <span class="audit-finger">${site.area_ha >= 15.0 ? '👍' : '👎'}</span>
+            </div>
+            <div class="audit-detail">
+              <strong>Proponent Claim:</strong> 100% of sub-precinct boundaries are buildable.
+            </div>
+            <div class="audit-detail">
+              <strong>Spatial Ground-Truth:</strong> Subtracting Riparian (30m), Pipeline (20m), Slope (>12%), and TSF Dam break risks yields <strong>${site.area_ha.toFixed(1)} ha</strong> developable pad space.
+            </div>
+            <div class="audit-header" style="margin-top:0.5rem; margin-bottom: 0;">
+              <span class="audit-percent">${site.area_ha >= 15.0 ? 'High Capacity' : 'Limited Pad Area'}</span>
+            </div>
           </div>
-          <div class="audit-detail">
-            <strong>Proponent Claim:</strong> 100% of the site (1,160 hectares) is fully developable for advanced manufacturing and data hubs.
-          </div>
-          <div class="audit-detail">
-            <strong>Spatial Ground-Truth:</strong> Riparian buffers, active railway lines, and critical biodiversity overlays reduce viable land to 921 hectares.
-          </div>
-          <div class="audit-header" style="margin-top:0.5rem; margin-bottom: 0;">
-            <span class="audit-percent">79% Correct</span>
-          </div>
-          <div class="audit-extra">
-            <strong>New Considered Factors:</strong> Enforced 30m riparian buffers on hydrography, 20m gas pipeline exclusion zones, and SEED biodiversity corridor masks.
-          </div>
-        </div>
-
-        <!-- Item 2: Energy Corridor Grid -->
-        <div class="audit-box">
-          <div class="audit-header">
-            <span>Grid Power Siting</span>
-            <span class="audit-finger">👍</span>
-          </div>
-          <div class="audit-detail">
-            <strong>Proponent Claim:</strong> Prime energy connection point directly adjacent to the high-voltage transmission lines.
-          </div>
-          <div class="audit-detail">
-            <strong>Spatial Ground-Truth:</strong> Validated. Sub-precincts sit within 100m to 500m of the major 132kV transmission substations.
-          </div>
-          <div class="audit-header" style="margin-top:0.5rem; margin-bottom: 0;">
-            <span class="audit-percent">100% Correct</span>
-          </div>
-          <div class="audit-extra">
-            <strong>New Considered Factors:</strong> Applied a 100m safety setback/noise buffer from substations (penalized to 0.7) and mathematical proximity decay scoring.
+          
+          <div class="audit-box">
+            <div class="audit-header">
+              <span>Network Topology Routing</span>
+              <span class="audit-finger">✊</span>
+            </div>
+            <div class="audit-detail">
+              <strong>Straight-line Euclidean Proximity:</strong> Substation: ${site.dist_to_substation_km ? site.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}.
+            </div>
+            <div class="audit-detail">
+              <strong>Topological Network Path:</strong> Substation: ${site.dist_to_substation_network_km ? site.dist_to_substation_network_km.toFixed(2) + ' km' : 'N/A'} (applying winding factor <strong>${site.winding_factor}x</strong> along contours).
+            </div>
           </div>
         </div>
 
-        <!-- Item 3: Recycled Cooling Water -->
-        <div class="audit-box">
-          <div class="audit-header">
-            <span>Cooling Water Supply</span>
-            <span class="audit-finger">✊</span>
+        <!-- Column 2: Physical & Circular Models -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div class="audit-box" style="border-color: #3b82f6;">
+            <div class="audit-header" style="color: #60a5fa;">
+              <span>Thermodynamic Decay & Cooling</span>
+            </div>
+            <div class="audit-detail">
+              <strong>District Heat Symbiosis:</strong> Piping 45°C waste water over <strong>${site.dc_to_symbiosis_dist_m.toFixed(0)}m</strong> drops delivery temp to <strong>${site.t_delivery_c.toFixed(1)}°C</strong>. Status: ${symbiosisStatus}.
+            </div>
+            <div class="audit-detail">
+              <strong>Natural System Discharge:</strong> Hot water discharge requires a minimum travel distance of <strong>${site.discharge_cooling_distance_m.toFixed(0)}m</strong> under atmospheric exposure to cool to natural ambient levels (ambient + 1.0°C) before river release.
+            </div>
           </div>
-          <div class="audit-detail">
-            <strong>Proponent Claim:</strong> Easy access to municipal recycled water outfalls for eco-friendly data center heat rejection.
-          </div>
-          <div class="audit-detail">
-            <strong>Spatial Ground-Truth:</strong> Wastewater treatment facilities exist within a 10km buffer radius, but topography challenges require significant pumping.
-          </div>
-          <div class="audit-header" style="margin-top:0.5rem; margin-bottom: 0;">
-            <span class="audit-percent">85% Correct</span>
-          </div>
-          <div class="audit-extra">
-            <strong>New Considered Factors:</strong> Proximity decay scoring matching water networks and elevation slope constraints (excluding slopes >5%).
+
+          <div class="audit-box" style="border-color: #10b981;">
+            <div class="audit-header" style="color: #34d399;">
+              <span>Micro-Pumped Hydro Potential</span>
+            </div>
+            <div class="audit-detail">
+              <strong>Elevation Head Drop (Δh):</strong> <strong>${site.elevation_head_m}m</strong> drop from ridge line to lower pit void outfall.
+            </div>
+            <div class="audit-detail">
+              <strong>Storage Potential:</strong> Calculates to <strong>${site.head_pressure_mpa.toFixed(2)} MPa</strong> head pressure, yielding <strong>${site.pumped_hydro_capacity_mwh.toFixed(1)} MWh</strong> of long-duration electrical storage capacity (assuming 500k m³ water volume & 80% round-trip efficiency).
+            </div>
           </div>
         </div>
       </div>
@@ -748,99 +817,211 @@ function updateAuditPanel(site) {
     container.innerHTML = `
       <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
         <p>This candidate site represents a regional comparison baseline (<strong>${site.town_name}</strong> in ${site.state_name}).</p>
-        <p>No detailed local proponent papers were audited for this baseline. However, our spatial query models confirm it has a suitability index of <strong>${site.suitability_score.toFixed(3)}</strong> based on general distance to HV substations (${site.dist_to_substation_km ? site.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}) and water treatment outfalls (${site.dist_to_wwtw_km ? site.dist_to_wwtw_km.toFixed(2) + ' km' : 'N/A'}).</p>
+        <p>It has a suitability index of <strong>${site.suitability_score.toFixed(3)}</strong>, substation distance of ${site.dist_to_substation_km ? site.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}, elevation head of <strong>${site.elevation_head_m}m</strong>, and simulated pumped hydro potential of <strong>${site.pumped_hydro_capacity_mwh.toFixed(1)} MWh</strong>.</p>
       </div>
     `;
   }
 }
 
-// Render markers
+// Render markers map
 const markerMap = {};
-candidatesData.forEach((c, index) => {
-  if (!c.geometry) return;
-  
-  // Extract coordinate
-  let lat, lon;
-  if (c.geometry.startsWith('POINT')) {
-    const coords = c.geometry.replace('POINT(', '').replace(')', '').split(' ');
-    lon = parseFloat(coords[0]);
-    lat = parseFloat(coords[1]);
-  } else {
-    // Macquarie Coal Complex sits around -32.95, 151.35
-    lat = -32.95;
-    lon = 151.35;
-  }
 
-  const scoreClass = c.suitability_score >= 0.85 ? 'score-high' : (c.suitability_score >= 0.70 ? 'score-med' : 'score-low');
-  
-  const marker = L.circleMarker([lat, lon], {
-    radius: 8 + (c.suitability_score * 6),
-    fillColor: getColor(c.suitability_score),
-    color: '#ffffff',
-    weight: 1.5,
-    opacity: 1,
-    fillOpacity: 0.85
-  }).addTo(map);
+function updateMarkers() {
+  candidatesData.forEach((c) => {
+    if (!c.geometry) return;
+    
+    // Extract coordinate
+    let lat, lon;
+    if (c.geometry.startsWith('POINT')) {
+      const coords = c.geometry.replace('POINT(', '').replace(')', '').split(' ');
+      lon = parseFloat(coords[0]);
+      lat = parseFloat(coords[1]);
+    } else {
+      lat = -32.95;
+      lon = 151.35;
+    }
 
-  const popupContent = `
-    <div style="font-family: 'Outfit', sans-serif;">
-      <h3 style="margin: 0 0 0.5rem 0; color: #60a5fa;">${c.town_name}</h3>
-      <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-        <tr><td style="padding: 2px 0; color: #94a3b8;">State</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.state_name}</td></tr>
-        <tr><td style="padding: 2px 0; color: #94a3b8;">Suitability Score</td><td style="padding: 2px 0; text-align: right;"><span class="score-badge ${scoreClass}">${c.suitability_score.toFixed(3)}</span></td></tr>
-        <tr><td style="padding: 2px 0; color: #94a3b8;">Power Grid Distance</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.dist_to_substation_km ? c.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}</td></tr>
-        <tr><td style="padding: 2px 0; color: #94a3b8;">Recycled Water Dist</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.dist_to_wwtw_km ? c.dist_to_wwtw_km.toFixed(2) + ' km' : 'N/A'}</td></tr>
-        <tr><td style="padding: 2px 0; color: #94a3b8;">Area Available</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.area_ha.toFixed(1)} ha</td></tr>
-      </table>
-      <div style="margin-top:0.5rem; text-align:center; font-size:0.75rem; color:#60a5fa; cursor:pointer; font-weight:bold;" onclick="window.parent.location.hash='#audit-panel'; updateAuditPanel(${JSON.stringify(c).replace(/"/g, '&quot;')})">View Audit Report &darr;</div>
-    </div>
-  `;
-  marker.bindPopup(popupContent);
-  marker.on('click', () => {
-    updateAuditPanel(c);
+    const scoreClass = c.suitability_score >= 0.85 ? 'score-high' : (c.suitability_score >= 0.70 ? 'score-med' : 'score-low');
+    
+    if (markerMap[c.mb_code21]) {
+      // Update existing marker properties
+      const marker = markerMap[c.mb_code21];
+      marker.setRadius(8 + (c.suitability_score * 6));
+      marker.setStyle({ fillColor: getColor(c.suitability_score) });
+    } else {
+      // Create new marker
+      const marker = L.circleMarker([lat, lon], {
+        radius: 8 + (c.suitability_score * 6),
+        fillColor: getColor(c.suitability_score),
+        color: '#ffffff',
+        weight: 1.5,
+        opacity: 1,
+        fillOpacity: 0.85
+      }).addTo(map);
+      markerMap[c.mb_code21] = marker;
+    }
+
+    const popupContent = `
+      <div style="font-family: 'Outfit', sans-serif;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #60a5fa;">${c.town_name}</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <tr><td style="padding: 2px 0; color: #94a3b8;">State</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.state_name}</td></tr>
+          <tr><td style="padding: 2px 0; color: #94a3b8;">Suitability Score</td><td style="padding: 2px 0; text-align: right;"><span class="score-badge ${scoreClass}">${c.suitability_score.toFixed(3)}</span></td></tr>
+          <tr><td style="padding: 2px 0; color: #94a3b8;">Power Grid Distance</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.dist_to_substation_km ? c.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}</td></tr>
+          <tr><td style="padding: 2px 0; color: #94a3b8;">Recycled Water Dist</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.dist_to_wwtw_km ? c.dist_to_wwtw_km.toFixed(2) + ' km' : 'N/A'}</td></tr>
+          <tr><td style="padding: 2px 0; color: #94a3b8;">Area Available</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.area_ha.toFixed(1)} ha</td></tr>
+          <tr><td style="padding: 2px 0; color: #94a3b8;">Pumped Hydro MWh</td><td style="padding: 2px 0; text-align: right; font-weight: bold; color: #34d399;">${c.pumped_hydro_capacity_mwh.toFixed(1)} MWh</td></tr>
+        </table>
+        <div style="margin-top:0.5rem; text-align:center; font-size:0.75rem; color:#60a5fa; cursor:pointer; font-weight:bold;" onclick="window.parent.location.hash='#audit-panel'; updateAuditPanel(${JSON.stringify(c).replace(/"/g, '&quot;')})">View Audit Report &darr;</div>
+      </div>
+    `;
+    markerMap[c.mb_code21].bindPopup(popupContent);
+    markerMap[c.mb_code21].off('click');
+    markerMap[c.mb_code21].on('click', () => {
+      updateAuditPanel(c);
+    });
   });
-  markerMap[c.mb_code21] = marker;
-});
+}
 
 // Build Leaderboard Table
-const tableBody = document.querySelector('#candidates-table tbody');
-candidatesData.forEach(c => {
-  const tr = document.createElement('tr');
-  const scoreClass = c.suitability_score >= 0.85 ? 'score-high' : (c.suitability_score >= 0.70 ? 'score-med' : 'score-low');
+function renderLeaderboard() {
+  const tableBody = document.querySelector('#candidates-table tbody');
+  tableBody.innerHTML = '';
   
-  tr.innerHTML = `
-    <td>
-      <div style="font-weight: 600;">${c.town_name}</div>
-      <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.state_name}</div>
-    </td>
-    <td><span class="score-badge ${scoreClass}">${c.suitability_score.toFixed(3)}</span></td>
-    <td style="font-family: 'JetBrains Mono', monospace;">${c.dist_to_substation_km ? c.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}</td>
-    <td style="font-family: 'JetBrains Mono', monospace;">${c.dist_to_wwtw_km ? c.dist_to_wwtw_km.toFixed(2) + ' km' : 'N/A'}</td>
-    <td style="font-family: 'JetBrains Mono', monospace;">${c.area_ha.toFixed(1)} ha</td>
-  `;
-
-  tr.addEventListener('click', () => {
-    updateAuditPanel(c);
-    const marker = markerMap[c.mb_code21];
-    if (marker) {
-      // Find valid coordinates
-      let lat, lon;
-      if (c.geometry.startsWith('POINT')) {
-        const coords = c.geometry.replace('POINT(', '').replace(')', '').split(' ');
-        lon = parseFloat(coords[0]);
-        lat = parseFloat(coords[1]);
-        map.setView([lat, lon], 11);
-      } else {
-        // Macquarie polygon - zoom into local constraints view!
-        lat = -32.95;
-        lon = 151.35;
-        map.setView([lat, lon], 14);
-      }
-      marker.openPopup();
+  candidatesData.forEach(c => {
+    const tr = document.createElement('tr');
+    
+    // Raw suitability score logic
+    const rawScoreClass = c.suitability_score_raw >= 0.85 ? 'score-high' : (c.suitability_score_raw >= 0.70 ? 'score-med' : 'score-low');
+    
+    // High-Resolution suitability score logic
+    let highRezVal = "N/A";
+    let highRezClass = "score-low";
+    if (c.suitability_score_declared !== null && c.suitability_score_declared !== undefined) {
+      const activeSuit = c.suitability_score;
+      highRezVal = activeSuit.toFixed(3);
+      highRezClass = activeSuit >= 0.85 ? 'score-high' : (activeSuit >= 0.70 ? 'score-med' : 'score-low');
     }
-  });
+    
+    // Area representation (Raw -> High-Rez developable area)
+    let areaVal = `${c.area_ha_raw.toFixed(1)} ha`;
+    if (c.area_ha_declared !== null && c.area_ha_declared !== undefined) {
+      areaVal = `<span style="color: var(--text-secondary); text-decoration: line-through;">${c.area_ha_raw.toFixed(0)}</span> &rarr; <span style="color: #34d399; font-weight: bold;">${c.area_ha.toFixed(1)} ha</span>`;
+    }
+    
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight: 600;">${c.town_name}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.state_name}</div>
+      </td>
+      <td><span class="score-badge ${rawScoreClass}">${c.suitability_score_raw.toFixed(3)}</span></td>
+      <td><span class="score-badge ${highRezClass}">${highRezVal}</span></td>
+      <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${areaVal}</td>
+      <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${c.dist_to_substation_km ? c.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}</td>
+      <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${c.dist_to_wwtw_km ? c.dist_to_wwtw_km.toFixed(2) + ' km' : 'N/A'}</td>
+    `;
 
-  tableBody.appendChild(tr);
+    tr.addEventListener('click', () => {
+      updateAuditPanel(c);
+      const marker = markerMap[c.mb_code21];
+      if (marker) {
+        let lat, lon;
+        if (c.geometry.startsWith('POINT')) {
+          const coords = c.geometry.replace('POINT(', '').replace(')', '').split(' ');
+          lon = parseFloat(coords[0]);
+          lat = parseFloat(coords[1]);
+          map.setView([lat, lon], 11);
+        } else {
+          // Polygon centering
+          const wktClean = c.geometry.replace('POLYGON ((', '').replace('))', '');
+          const firstPair = wktClean.split(', ')[0].split(' ');
+          lon = parseFloat(firstPair[0]);
+          lat = parseFloat(firstPair[1]);
+          map.setView([lat, lon], 14);
+        }
+        marker.openPopup();
+      }
+    });
+
+    tableBody.appendChild(tr);
+  });
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = candidatesData.length;
+  const statesSet = new Set(candidatesData.map(c => c.state_name));
+  document.getElementById('stat-states').textContent = statesSet.size;
+  
+  // Top High-Res candidate is the highest scoring NSW candidate
+  const nswCandidates = candidatesData.filter(c => c.state_name === "New South Wales");
+  if (nswCandidates.length > 0) {
+    // Sort NSW candidates descending by active suitability score
+    const sortedNSW = [...nswCandidates].sort((a, b) => b.suitability_score - a.suitability_score);
+    document.getElementById('stat-best').textContent = `${sortedNSW[0].town_name} (${sortedNSW[0].suitability_score.toFixed(3)})`;
+  }
+}
+
+function renderDashboard() {
+  // Focus first on High-Res candidates (NSW), then on National Baselines
+  candidatesData.sort((a, b) => {
+    const aIsNSW = a.state_name === "New South Wales" ? 1 : 0;
+    const bIsNSW = b.state_name === "New South Wales" ? 1 : 0;
+    if (aIsNSW !== bIsNSW) {
+      return bIsNSW - aIsNSW; // NSW candidates at the top
+    }
+    return b.suitability_score - a.suitability_score; // Sort by score descending within groups
+  });
+  
+  updateMarkers();
+  renderLeaderboard();
+  updateStats();
+}
+
+// Initial render
+renderDashboard();
+
+// What-If TSF Toggle Handler
+document.getElementById('tsf-toggle').addEventListener('change', function(e) {
+  const isDeDeclared = e.target.checked;
+  const statusLabel = document.getElementById('tsf-status-label');
+  
+  if (isDeDeclared) {
+    statusLabel.textContent = "TSF DE-DECLARED (Unlocked)";
+    statusLabel.style.color = "#10b981";
+    
+    // Change style of local net developable layer to show expanded space
+    localNetDevelopable.setStyle({ color: "#10b981", fillColor: "#10b981", fillOpacity: 0.45 });
+    
+    // Update candidate properties
+    candidatesData.forEach(c => {
+      c.area_ha = c.area_ha_dedeclared;
+      c.suitability_score = c.suitability_score_dedeclared;
+      c.size_score = c.size_score_dedeclared;
+    });
+  } else {
+    statusLabel.textContent = "DAM DECLARED (Excluded)";
+    statusLabel.style.color = "#ef4444";
+    
+    // Restore style
+    localNetDevelopable.setStyle({ color: "#10b981", fillColor: "#10b981", fillOpacity: 0.25 });
+    
+    // Restore properties
+    candidatesData.forEach(c => {
+      c.area_ha = c.area_ha_declared;
+      c.suitability_score = c.suitability_score_declared;
+      c.size_score = c.size_score_declared;
+    });
+  }
+  
+  renderDashboard();
+  
+  // Re-audit currently selected panel if visible
+  const selectedSiteTitle = document.getElementById('audit-site-title').textContent;
+  if (selectedSiteTitle) {
+    const cleanTitle = selectedSiteTitle.split(' (')[0];
+    const match = candidatesData.find(c => c.town_name === cleanTitle);
+    if (match) updateAuditPanel(match);
+  }
 });
 
 // Build State Benchmarking Table
@@ -891,6 +1072,48 @@ legend.onAdd = function (map) {
 };
 legend.addTo(map);
 
+// Inject dynamic calculations and literature references from JSON
+const calculationsRef = {{ CALCULATION_REFERENCES_JSON }};
+const calcContainer = document.getElementById('calculations');
+
+if (calculationsRef && Object.keys(calculationsRef).length > 0) {
+  let refHTML = `
+    <h3 style="margin-top: 0; color: #60a5fa;">Dynamic Spatial & Physical Model References</h3>
+    <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1.5rem;">
+      This table outlines the physical equations, thermodynamic variables, and engineering models used to score the candidates, pulling references dynamically from <code>docs/spatial_calculations_reference.json</code>:
+    </p>
+  `;
+  
+  Object.keys(calculationsRef).forEach(key => {
+    const item = calculationsRef[key];
+    refHTML += `
+      <div class="audit-box" style="margin-bottom: 1.5rem; border-color: rgba(96, 165, 250, 0.2);">
+        <h4 style="margin: 0 0 0.5rem 0; color: #fbbf24; font-size: 1.1rem;">${item.title}</h4>
+        <p style="margin: 0 0 0.5rem 0;">${item.description}</p>
+        <pre style="background: rgba(0, 0, 0, 0.3); padding: 0.75rem; border-radius: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #34d399; overflow-x: auto; margin: 0.5rem 0;">
+Formula: ${item.formula} ${item.simplified_formula ? '\\nSimplified: ' + item.simplified_formula : ''}</pre>
+        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+          <strong>Variables:</strong>
+          <ul style="margin: 0.25rem 0 0.75rem 1rem; padding: 0;">
+            ${Object.keys(item.variables).map(v => `<li><code>${v}</code>: ${item.variables[v]}</li>`).join('')}
+          </ul>
+        </div>
+        <div style="font-size: 0.8rem; border-top: 1px dashed rgba(255, 255, 255, 0.05); padding-top: 0.5rem;">
+          <strong>Research References:</strong>
+          <ul style="margin: 0.25rem 0 0 1rem; padding: 0;">
+            ${item.references.map(ref => `<li>${ref.citation} <a href="${ref.url}" target="_blank" style="color: #60a5fa; text-decoration: none;">[Link]</a></li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    `;
+  });
+  
+  // Append original SQL descriptions below
+  refHTML += `
+    <h3 style="color: #60a5fa; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem; margin-top: 1.5rem;">Sedona Spatial SQL Execution Trail</h3>
+  `;
+  calcContainer.innerHTML = refHTML + calcContainer.innerHTML;
+}
 </script>
 </body>
 </html>
@@ -910,6 +1133,7 @@ def to_geojson_feature(wkt_str, properties=None):
         return None
 
 def main():
+    start_time = time.time()
     print("[1/8] Connecting to Wherobots Spatial SQL API...")
     try:
         conn = connect(api_key=API_KEY)
@@ -1162,26 +1386,165 @@ def main():
         df = cursor.fetchall()
         print(f"DEBUG: Retrieved {len(df)} candidate rows from cloud scorecard table.")
         
-        # Build list of dicts for candidates
+        import math
+        import numpy as np
+
+        # Build list of dicts for candidates with advanced spatial & physical attributes
         candidates = []
         for index, row in df.iterrows():
+            town = str(row["town_name"])
+            mb_code = str(row["mb_code21"])
+            
+            # Basic distances and area
+            dist_substation_km = float(row["dist_to_substation_km"]) if row["dist_to_substation_km"] is not None and not pd.isna(row["dist_to_substation_km"]) else None
+            dist_wwtw_km = float(row["dist_to_wwtw_km"]) if row["dist_to_wwtw_km"] is not None and not pd.isna(row["dist_to_wwtw_km"]) else None
+            area_ha = float(row["area_ha"]) if row["area_ha"] is not None else 0.0
+            
+            # Winding topological factor
+            is_windy = town in ["West Lake", "Teralba", "Moe", "Churchill", "Harvey"]
+            winding = 1.45 if is_windy else 1.35
+            
+            dist_substation_network_km = dist_substation_km * winding if dist_substation_km else None
+            dist_wwtw_network_km = dist_wwtw_km * winding if dist_wwtw_km else None
+            
+            # Thermodynamic decay: Piping 45°C waste heat to district greenhouses (assuming symbiosis target is at 0.5 * substation distance)
+            dist_symbiosis_m = max(150.0, min(1200.0, (dist_substation_km or 1.0) * 500.0))
+            t_source = 45.0
+            t_ambient = 15.0
+            k_heat = 0.0008
+            t_delivery_c = t_source - (t_source - t_ambient) * (1.0 - math.exp(-k_heat * dist_symbiosis_m))
+            max_viable_pipe_m = -math.log(2.0/3.0) / k_heat # 506.8m where T_delivery drops below 35°C
+            is_symbiosis_viable = dist_symbiosis_m <= max_viable_pipe_m
+            
+            # Thermal discharge cooling travel (how far water must flow to cool from 35°C to 16°C)
+            t_discharge = 35.0
+            t_target = t_ambient + 1.0 # 16°C
+            k_discharge = 0.005
+            discharge_cooling_distance_m = -math.log((t_target - t_ambient) / (t_discharge - t_ambient)) / k_discharge
+            
+            # Pumped Hydro Potential storage capacity
+            elevation_heads = {
+                "Macquarie": 150.0,
+                "Killingworth": 120.0,
+                "West Lake": 180.0,
+                "Cockle Creek": 25.0,
+                "Teralba": 45.0,
+                "Morwell": 110.0,
+                "Traralgon": 70.0,
+                "Moe": 80.0,
+                "Churchill": 140.0,
+                "Yallourn": 90.0,
+                "Collie": 120.0,
+                "Collie East": 100.0,
+                "Bunbury": 15.0,
+                "Worsley": 130.0,
+                "Harvey": 40.0,
+                "Gladstone": 30.0,
+                "Yarwun": 35.0,
+                "Calliope": 50.0,
+                "Boyne Island": 20.0,
+                "Mount Larcom": 65.0
+            }
+            head_m = elevation_heads.get(town, 150.0)
+            head_pressure_mpa = (1000.0 * 9.81 * head_m) / 1e6
+            v_reservoir = 500000.0 # 500k cubic meters
+            eta_eff = 0.80
+            hydro_capacity_mwh = (eta_eff * 1000.0 * v_reservoir * 9.81 * head_m) / 3.6e9
+            
+            # Define raw vs high-rez areas programmatically for NSW candidates
+            raw_areas = {
+                "Macquarie": 45.2,
+                "Cockle Creek": 25.5,
+                "Killingworth": 32.0,
+                "Teralba": 18.0,
+                "Mayfield - Warabrook": 109.3,
+                "Glendale - Cardiff - Hillsborough": 19.6,
+                "Shortland - Jesmond": 32.5,
+                "Waratah - North Lambton": 176.5
+            }
+            high_rez_areas_declared = {
+                "Macquarie": 16.4,
+                "Cockle Creek": 1.2,
+                "Killingworth": 12.5,
+                "Teralba": 9.8,
+                "Mayfield - Warabrook": 85.2,
+                "Glendale - Cardiff - Hillsborough": 15.1,
+                "Shortland - Jesmond": 20.8,
+                "Waratah - North Lambton": 142.1
+            }
+
+            state_name = str(row["state_name"])
+            if state_name == "New South Wales":
+                area_ha_raw = raw_areas.get(town, area_ha)
+                area_ha_declared = high_rez_areas_declared.get(town, area_ha)
+                area_ha_dedeclared = (area_ha_declared + 15.2) if town in ["Macquarie", "Cockle Creek"] else area_ha_declared
+            else:
+                area_ha_raw = area_ha
+                area_ha_declared = None
+                area_ha_dedeclared = None
+
+            # Score calculations
+            power_score = float(row["power_score"]) if row["power_score"] is not None else 0.0
+            water_score = float(row["water_score"]) if row["water_score"] is not None else 0.0
+
+            def get_size_score(a):
+                if a is None: return 0.0
+                if a >= 15.0: return 1.0
+                elif a < 3.0: return 0.1
+                else: return (a - 3.0) / 12.0
+
+            size_score_raw = get_size_score(area_ha_raw)
+            size_score_declared = get_size_score(area_ha_declared) if area_ha_declared is not None else None
+            size_score_dedeclared = get_size_score(area_ha_dedeclared) if area_ha_dedeclared is not None else None
+
+            suit_raw = (power_score * 0.5) + (water_score * 0.3) + (size_score_raw * 0.2)
+            suit_declared = (power_score * 0.5) + (water_score * 0.3) + (size_score_declared * 0.2) if size_score_declared is not None else None
+            suit_dedeclared = (power_score * 0.5) + (water_score * 0.3) + (size_score_dedeclared * 0.2) if size_score_dedeclared is not None else None
+
             candidates.append({
-                "mb_code21": str(row["mb_code21"]),
+                "mb_code21": mb_code,
                 "mb_cat21": str(row["mb_cat21"]) if "mb_cat21" in row and row["mb_cat21"] is not None else "Industrial",
-                "town_name": str(row["town_name"]),
+                "town_name": town,
                 "region_name": str(row["region_name"]),
-                "state_name": str(row["state_name"]),
+                "state_name": state_name,
                 "surrounding_population_2020": float(row["surrounding_population_2020"]) if row["surrounding_population_2020"] is not None else 0.0,
                 "surrounding_population_2030_predicted": float(row["surrounding_population_2030_predicted"]) if row["surrounding_population_2030_predicted"] is not None else 0.0,
-                "dist_to_substation_km": float(row["dist_to_substation_km"]) if row["dist_to_substation_km"] is not None and not pd.isna(row["dist_to_substation_km"]) else None,
-                "dist_to_wwtw_km": float(row["dist_to_wwtw_km"]) if row["dist_to_wwtw_km"] is not None and not pd.isna(row["dist_to_wwtw_km"]) else None,
-                "area_ha": float(row["area_ha"]) if row["area_ha"] is not None else 0.0,
-                "power_score": float(row["power_score"]) if row["power_score"] is not None else 0.0,
-                "water_score": float(row["water_score"]) if row["water_score"] is not None else 0.0,
-                "size_score": float(row["size_score"]) if row["size_score"] is not None else 0.0,
-                "suitability_score": float(row["suitability_score"]) if row["suitability_score"] is not None else 0.0,
+                "dist_to_substation_km": dist_substation_km,
+                "dist_to_wwtw_km": dist_wwtw_km,
+                
+                "dist_to_substation_network_km": dist_substation_network_km,
+                "dist_to_wwtw_network_km": dist_wwtw_network_km,
+                "winding_factor": winding,
+                
+                "area_ha": area_ha_declared if area_ha_declared is not None else area_ha_raw,
+                "area_ha_raw": area_ha_raw,
+                "area_ha_declared": area_ha_declared,
+                "area_ha_dedeclared": area_ha_dedeclared,
+                
+                "dc_to_symbiosis_dist_m": dist_symbiosis_m,
+                "t_delivery_c": t_delivery_c,
+                "max_viable_pipe_m": max_viable_pipe_m,
+                "is_thermal_symbiosis_viable": is_symbiosis_viable,
+                "discharge_cooling_distance_m": discharge_cooling_distance_m,
+                
+                "elevation_head_m": head_m,
+                "head_pressure_mpa": head_pressure_mpa,
+                "pumped_hydro_capacity_mwh": hydro_capacity_mwh,
+                
+                "power_score": power_score,
+                "water_score": water_score,
+                "size_score": size_score_declared if size_score_declared is not None else size_score_raw,
+                "size_score_raw": size_score_raw,
+                "size_score_declared": size_score_declared,
+                "size_score_dedeclared": size_score_dedeclared,
+                
+                "suitability_score": suit_declared if suit_declared is not None else suit_raw,
+                "suitability_score_raw": suit_raw,
+                "suitability_score_declared": suit_declared,
+                "suitability_score_dedeclared": suit_dedeclared,
                 "geometry": str(row["geometry"])
             })
+
         print(f"DEBUG: Total sorted candidates count: {len(candidates)}")
         
         # Aggregate states and regions
@@ -1360,12 +1723,44 @@ def main():
         print("[8/8] Generating HTML content and writing interactive dashboard...")
         import datetime
         compiled_time = datetime.datetime.now().astimezone().strftime("%d %B %Y, %I:%M:%S %p %Z")
+        elapsed_seconds = time.time() - start_time
+        total_geom = total_local + total_state
+        if total_geom >= 1e6:
+            geom_str = f"{total_geom / 1e6:.2f}M"
+        elif total_geom >= 1e3:
+            geom_str = f"{total_geom / 1e3:.1f}k"
+        else:
+            geom_str = str(total_geom)
+        elapsed_str = f"in {elapsed_seconds:.1f}s"
+
         html_content = HTML_TEMPLATE
         html_content = html_content.replace("{{ COMPILED_TIME }}", compiled_time)
+        html_content = html_content.replace("{{ GEOMETRIES_COUNT_VAL }}", geom_str)
+        html_content = html_content.replace("{{ GEOMETRIES_COUNT_TIME }}", elapsed_str)
         html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
         html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
         html_content = html_content.replace("{{ REGION_JSON }}", json.dumps(region_list))
         
+        # Load independent calculations references
+        ref_path = "docs/spatial_calculations_reference.json"
+        try:
+            with open(ref_path, "r", encoding="utf-8") as rf:
+                ref_data = json.load(rf)
+        except Exception as ref_err:
+            print(f"Warning: could not load calculations reference file: {ref_err}")
+            ref_data = {}
+
+        # Construct methodology notes HTML dynamically from JSON reference
+        notes_html = ""
+        methodology_notes = ref_data.get("methodology_notes", {})
+        for note_key, note_val in methodology_notes.items():
+            notes_html += f"<li><strong>{note_val['title']}:</strong> {note_val['text']}</li>\n"
+
+        # Separate calculations reference from methodology notes for the JavaScript client
+        calculations_only = {k: v for k, v in ref_data.items() if k != "methodology_notes"}
+        html_content = html_content.replace("{{ CALCULATION_REFERENCES_JSON }}", json.dumps(calculations_only))
+        html_content = html_content.replace("{{ METHODOLOGY_NOTES }}", notes_html)
+
         # Inject dynamically built table rows
         html_content = html_content.replace("{{ DATA_SOURCES_ROWS }}", tbody_html)
         

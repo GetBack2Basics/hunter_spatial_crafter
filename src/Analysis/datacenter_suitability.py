@@ -82,7 +82,9 @@ def main():
           ON ST_DWithin(z.net_developable_geom, r.geometry, 20000.0)
         GROUP BY z.precinct_key
     """).toPandas()
-    
+
+    import numpy as np
+
     # Calculate developable zones area
     zones_df = spark.sql("""
         SELECT 
@@ -94,6 +96,43 @@ def main():
     # Merge metrics
     metrics_df = zones_df.merge(power_dist_df, on="precinct_key").merge(rail_dist_df, on="precinct_key")
     
+    # Thermodynamic decay & heat symbiosis routing
+    metrics_df["dc_to_symbiosis_dist_m"] = metrics_df["dist_to_power_m"].fillna(1000.0).apply(lambda d: float(max(150.0, min(1200.0, d * 0.5))))
+    
+    t_source = 45.0
+    t_ambient = 15.0
+    k_heat = 0.0008
+    metrics_df["t_delivery_c"] = t_source - (t_source - t_ambient) * (1.0 - np.exp(-k_heat * metrics_df["dc_to_symbiosis_dist_m"]))
+    
+    metrics_df["max_viable_pipe_m"] = -np.log(2.0/3.0) / k_heat
+    metrics_df["is_thermal_symbiosis_viable"] = metrics_df["dc_to_symbiosis_dist_m"] <= metrics_df["max_viable_pipe_m"]
+
+    # Thermal discharge naturalization cooling distance
+    t_discharge = 35.0
+    t_target = t_ambient + 1.0 # 16°C
+    k_discharge = 0.005
+    metrics_df["discharge_cooling_distance_m"] = -np.log((t_target - t_ambient) / (t_discharge - t_ambient)) / k_discharge
+
+    # Pumped Hydro Potential storage capacity
+    elevation_heads = {
+        "mcc": 150.0,
+        "Killingworth": 120.0,
+        "West Lake": 180.0,
+        "Cockle Creek": 25.0,
+        "Teralba": 45.0
+    }
+    metrics_df["elevation_head_m"] = metrics_df["precinct_key"].map(elevation_heads).fillna(150.0)
+    metrics_df["head_pressure_mpa"] = (1000.0 * 9.81 * metrics_df["elevation_head_m"]) / 1e6
+    
+    v_reservoir = 500000.0
+    eta_eff = 0.80
+    metrics_df["pumped_hydro_capacity_mwh"] = (eta_eff * 1000.0 * v_reservoir * 9.81 * metrics_df["elevation_head_m"]) / 3.6e9
+
+    # Network routing distance vs straight line
+    metrics_df["winding_factor"] = metrics_df["precinct_key"].apply(lambda k: 1.45 if k in ["West Lake", "Teralba"] else 1.35)
+    metrics_df["dist_to_power_network_m"] = metrics_df["dist_to_power_m"] * metrics_df["winding_factor"]
+    metrics_df["dist_to_rail_network_m"] = metrics_df["dist_to_rail_m"] * metrics_df["winding_factor"]
+
     # Compute scores
     metrics_df["power_score"] = metrics_df["dist_to_power_m"].apply(score_power)
     metrics_df["size_score"] = metrics_df["area_ha"].apply(score_size)
@@ -103,7 +142,7 @@ def main():
     print("===START_SUITABILITY_TABLE===")
     print(metrics_df.to_json(orient="records"))
     print("===END_SUITABILITY_TABLE===")
-    
+
     # 3. Generating Plot
     print("[analysis] Generating suitability plot...")
     fig, ax = plt.subplots(figsize=(8, 7))

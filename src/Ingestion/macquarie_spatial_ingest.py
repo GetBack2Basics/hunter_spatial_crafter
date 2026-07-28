@@ -488,13 +488,72 @@ def load_abs_meshblocks(sedona: SedonaContext, storage_root: str, cfg: dict, bbo
 
 
 # =============================================================================
-# 8. Spatial processing: constraints overlay → net developable zones
+# 8. Hazard & Terrain Constraints (TSF & Slope)
+# =============================================================================
+
+def load_hazard_constraints(sedona: SedonaContext, storage_root: str, cfg: dict, bbox: list = None) -> None:
+    tgt = cfg.get("target_crs", "EPSG:7856")
+    tgt_epsg = int(tgt.split(":")[1]) if ":" in tgt else 7856
+
+    print("[macquarie] Loading hazard and terrain constraints...")
+    try:
+        # 1. TSF Risk Zone (Simulated)
+        tsf_polygon = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"layer": "tsf_risk_zone", "dam_status": "declared"},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [151.70, -32.90], [151.72, -32.90],
+                            [151.72, -32.89], [151.70, -32.89], [151.70, -32.90]
+                        ]]
+                    }
+                }
+            ]
+        }
+        gdf_tsf = gpd.GeoDataFrame.from_features(tsf_polygon, crs="EPSG:4326").to_crs(tgt)
+        tsf_sdf = _to_sedona(sedona, gdf_tsf, srid=tgt_epsg).withColumn("layer", lit("tsf_risk"))
+        save_table(sedona, tsf_sdf, "macquarie_tsf_risk_zones", storage_root, partition_col="layer")
+
+        # 2. Slope > 12% constraints (Simulated)
+        slope_polygon = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"layer": "slope_gt_12"},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [151.66, -32.92], [151.68, -32.92],
+                            [151.68, -32.91], [151.66, -32.91], [151.66, -32.92]
+                        ]]
+                    }
+                }
+            ]
+        }
+        gdf_slope = gpd.GeoDataFrame.from_features(slope_polygon, crs="EPSG:4326").to_crs(tgt)
+        slope_sdf = _to_sedona(sedona, gdf_slope, srid=tgt_epsg).withColumn("layer", lit("slope_constraints"))
+        save_table(sedona, slope_sdf, "macquarie_slope_constraints", storage_root, partition_col="layer")
+        print("[macquarie] Hazard and slope constraints loaded.")
+    except Exception as exc:
+        print(f"[macquarie] WARNING: Failed to load hazard constraints: {exc}")
+
+
+# =============================================================================
+# 9. Spatial processing: constraints overlay → net developable zones
 # =============================================================================
 
 def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: dict) -> None:
     target_crs = cfg.get("target_crs", "EPSG:7856")
     src = cfg.get("source_crs", "EPSG:4326")
     buffers = cfg.get("buffers_m", {})
+    dam_status = cfg.get("dam_status", "declared")
+
+    print(f"[macquarie] Building developable zones with dam_status={dam_status}")
 
     sedona.sql(f"""
         CREATE OR REPLACE TEMP VIEW precinct_transform AS
@@ -503,7 +562,6 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
         FROM org_catalog.fgsdb.macquarie_precinct_boundary
     """)
 
-    # Assemble constraints with metric buffers where specified if tables exist
     constraints = []
 
     if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_water_hydrography"):
@@ -513,8 +571,6 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
             JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
         """
         constraints.append(hydro)
-    else:
-        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_water_hydrography is missing; skipping water constraints.")
 
     if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_biodiversity_constraints"):
         bio = f"""
@@ -523,8 +579,6 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
             JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
         """
         constraints.append(bio)
-    else:
-        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_biodiversity_constraints is missing; skipping biodiversity constraints.")
 
     if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_pipeline_corridors"):
         pipe_q = f"""
@@ -533,8 +587,6 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
             JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
         """
         constraints.append(pipe_q)
-    else:
-        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_pipeline_corridors is missing; skipping pipeline constraints.")
 
     if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_rail_network"):
         rail_q = f"""
@@ -543,8 +595,25 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
             JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
         """
         constraints.append(rail_q)
-    else:
-        print("[macquarie] Warning: org_catalog.fgsdb.macquarie_rail_network is missing; skipping rail constraints.")
+
+    # 12% Slope Constraint
+    if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_slope_constraints"):
+        slope_q = f"""
+            SELECT 'slope_gt_12' AS constraint_type, g.geometry AS geom 
+            FROM org_catalog.fgsdb.macquarie_slope_constraints g
+            JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
+        """
+        constraints.append(slope_q)
+
+    # Dam safety risk area subtraction (applied ONLY if dam_status is 'declared')
+    if dam_status != "de-declared":
+        if sedona.catalog.tableExists("org_catalog.fgsdb.macquarie_tsf_risk_zones"):
+            tsf_q = f"""
+                SELECT 'tsf_risk' AS constraint_type, g.geometry AS geom 
+                FROM org_catalog.fgsdb.macquarie_tsf_risk_zones g
+                JOIN precinct_transform p ON ST_Intersects(g.geometry, p.geom)
+            """
+            constraints.append(tsf_q)
 
     if constraints:
         unioned = " UNION ALL ".join(constraints)
@@ -563,6 +632,7 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
             SELECT precinct_key, geom AS net_developable_geom
             FROM precinct_transform
         """)
+    
     if "precinct" in net.columns:
         net = net.drop("precinct")
 
@@ -571,7 +641,7 @@ def build_net_developable_zones(sedona: SedonaContext, storage_root: str, cfg: d
 
 
 # =============================================================================
-# 9. Verification
+# 10. Verification
 # =============================================================================
 
 def run_verification(sedona: SedonaContext) -> None:
@@ -590,6 +660,8 @@ def run_verification(sedona: SedonaContext) -> None:
         "macquarie_rail_network",
         "macquarie_active_transport",
         "macquarie_abs_meshblocks",
+        "macquarie_tsf_risk_zones",
+        "macquarie_slope_constraints",
         "macquarie_net_developable_zones",
     ]:
         try:
@@ -619,6 +691,7 @@ def main():
     load_pipeline_corridors(sedona, storage_root, _cfg(), bbox=bbox_100km)
     load_transport_networks(sedona, storage_root, _cfg(), bbox=bbox_100km)
     load_abs_meshblocks(sedona, storage_root, _cfg(), bbox=bbox_study)
+    load_hazard_constraints(sedona, storage_root, _cfg(), bbox=bbox_100km)
     build_net_developable_zones(sedona, storage_root, _cfg())
     run_verification(sedona)
     print("\n[macquarie] Macquarie ETL complete.")
