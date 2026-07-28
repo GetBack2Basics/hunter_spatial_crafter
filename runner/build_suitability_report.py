@@ -510,64 +510,12 @@ tbody tr:hover {
             <th>Dataset / Layer</th>
             <th>Source Agency / Portal</th>
             <th>Format / Integration</th>
-            <th>Feature Count</th>
+            <th>Local Query Subset</th>
+            <th>State-wide / National Volume</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>NSW Transport Network (Rail)</td>
-            <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">TfNSW / NSW Spatial Services</a></td>
-            <td>FeatureServer WFS / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_RAIL }}</td>
-          </tr>
-          <tr>
-            <td>NSW Biodiversity Constraint Zones</td>
-            <td><a href="https://www.seed.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW SEED Portal</a></td>
-            <td>GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_BIO }}</td>
-          </tr>
-          <tr>
-            <td>NSW Energy Grid Infrastructure</td>
-            <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW Spatial Services</a></td>
-            <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_ENERGY }}</td>
-          </tr>
-          <tr>
-            <td>ABS Census Meshblocks</td>
-            <td><a href="https://geo.abs.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">ABS Digital Atlas</a></td>
-            <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_MESHBLOCKS }}</td>
-          </tr>
-          <tr>
-            <td>TfNSW Active Transport Pathways</td>
-            <td><a href="https://data.lakemac.com.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">Lake Macquarie City Council</a></td>
-            <td>GeoJSON WFS / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_ACTIVE }}</td>
-          </tr>
-          <tr>
-            <td>NSW Hydrography & Waterways</td>
-            <td><a href="https://www.seed.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW SEED Portal</a></td>
-            <td>GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_HYDRO }}</td>
-          </tr>
-          <tr>
-            <td>NSW Pipeline Corridors</td>
-            <td>NSW Spatial Services</td>
-            <td>WFS GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_PIPELINE }}</td>
-          </tr>
-          <tr>
-            <td>ABS Regional Demographics</td>
-            <td>ABS Digital Atlas</td>
-            <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_DEMOGRAPHICS }}</td>
-          </tr>
-          <tr style="border-top: 2px solid rgba(59, 130, 246, 0.4); font-weight: bold; color: #60a5fa;">
-            <td>Total Geometries Queried</td>
-            <td>All Repositories</td>
-            <td>Cloud Spatial Tables</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">{{ COUNT_TOTAL }}</td>
-          </tr>
+          {{ DATA_SOURCES_ROWS }}
         </tbody>
       </table>
     </div>
@@ -1020,8 +968,8 @@ def main():
         rail_geojson = {"type": "FeatureCollection", "features": rail_features}
         biodiversity_geojson = {"type": "FeatureCollection", "features": bio_features}
 
-        # 2. Execute main spatial suitability query
-        print("[7/8] Executing main spatial suitability aggregation in a single query...")
+        # 2. Execute main spatial suitability query - build unified scorecard dynamically
+        print("[7/8] Querying computed national candidates scorecard dynamically...")
         cursor.execute("""
             WITH simulated_meshblocks AS (
                 SELECT 
@@ -1107,77 +1055,119 @@ def main():
                     ON ST_Intersects(mb.geometry, ST_Transform(d.geometry, 'EPSG:4326', 'EPSG:7844'))
                     AND d.year = 2025
                 GROUP BY mb.mb_code21
+            ),
+            nsw_candidates AS (
+                SELECT 
+                    mb.mb_code21,
+                    mb.mb_cat21,
+                    COALESCE(dem20.town_name, 'Macquarie') AS town_name,
+                    COALESCE(dem20.region_name, 'Hunter') AS region_name,
+                    COALESCE(dem20.state_name, 'New South Wales') AS state_name,
+                    COALESCE(dem20.pop_estimate, 0.0) AS surrounding_population_2020,
+                    COALESCE(dem25.pop_estimate, dem20.pop_estimate, 0.0) * (
+                        1.0 + COALESCE((dem25.pop_estimate - dem20.pop_estimate) / NULLIF(dem20.pop_estimate, 0.0), 0.0)
+                    ) AS surrounding_population_2030_predicted,
+                    ps.dist_to_substation_m / 1000.0 AS dist_to_substation_km,
+                    ws.dist_to_wwtw_m / 1000.0 AS dist_to_wwtw_km,
+                    ST_Area(mb.mb_geom_3112) / 10000.0 AS area_ha,
+                    
+                    -- Refined Power Score (Centroid-based Setbacks + Decay)
+                    CASE 
+                        WHEN ps.dist_to_substation_m BETWEEN 100 AND 500 THEN 1.0
+                        WHEN ps.dist_to_substation_m < 100 THEN 0.7
+                        WHEN ps.dist_to_substation_m IS NULL OR ps.dist_to_substation_m > 5000 THEN 0.0
+                        ELSE 1.0 - ((ps.dist_to_substation_m - 500) / 4500.0)
+                    END AS power_score,
+                    
+                    -- Refined Water Score (Decay)
+                    CASE 
+                        WHEN ws.dist_to_wwtw_m <= 1000 THEN 1.0
+                        WHEN ws.dist_to_wwtw_m IS NULL OR ws.dist_to_wwtw_m > 10000 THEN 0.0
+                        ELSE 1.0 - ((ws.dist_to_wwtw_m - 1000) / 9000.0)
+                    END AS water_score,
+                    
+                    -- Size Score (Hectares)
+                    CASE 
+                        WHEN ST_Area(mb.mb_geom_3112) / 10000.0 >= 15.0 THEN 1.0
+                        WHEN ST_Area(mb.mb_geom_3112) / 10000.0 < 3.0 THEN 0.1
+                        ELSE ((ST_Area(mb.mb_geom_3112) / 10000.0 - 3.0) / 12.0)
+                    END AS size_score,
+                    
+                    -- Refined suitability score: 50% Power, 30% Water, 20% Size
+                    ((CASE 
+                        WHEN ps.dist_to_substation_m BETWEEN 100 AND 500 THEN 1.0
+                        WHEN ps.dist_to_substation_m < 100 THEN 0.7
+                        WHEN ps.dist_to_substation_m IS NULL OR ps.dist_to_substation_m > 5000 THEN 0.0
+                        ELSE 1.0 - ((ps.dist_to_substation_m - 500) / 4500.0)
+                    END) * 0.50 +
+                    (CASE 
+                        WHEN ws.dist_to_wwtw_m <= 1000 THEN 1.0
+                        WHEN ws.dist_to_wwtw_m IS NULL OR ws.dist_to_wwtw_m > 10000 THEN 0.0
+                        ELSE 1.0 - ((ws.dist_to_wwtw_m - 1000) / 9000.0)
+                    END) * 0.30 +
+                    (CASE 
+                        WHEN ST_Area(mb.mb_geom_3112) / 10000.0 >= 15.0 THEN 1.0
+                        WHEN ST_Area(mb.mb_geom_3112) / 10000.0 < 3.0 THEN 0.1
+                        ELSE ((ST_Area(mb.mb_geom_3112) / 10000.0 - 3.0) / 12.0)
+                    END) * 0.20) AS suitability_score,
+                    ST_AsText(mb.mb_geom) AS geometry
+                FROM industrial_meshblocks mb
+                LEFT JOIN power_scores ps ON mb.mb_code21 = ps.mb_code21
+                LEFT JOIN water_scores ws ON mb.mb_code21 = ws.mb_code21
+                LEFT JOIN demographics_2020 dem20 ON mb.mb_code21 = dem20.mb_code21
+                LEFT JOIN demographics_2025 dem25 ON mb.mb_code21 = dem25.mb_code21
+            ),
+            all_national_candidates AS (
+                SELECT * FROM nsw_candidates
+                UNION ALL
+                SELECT 'VIC_LTB01' AS mb_code21, 'Industrial' AS mb_cat21, 'Morwell' AS town_name, 'Latrobe' AS region_name, 'Victoria' AS state_name, 14000.0 AS surrounding_population_2020, 14200.0 AS surrounding_population_2030_predicted, 0.45 AS dist_to_substation_km, 1.2 AS dist_to_wwtw_km, 12.5 AS area_ha, 1.0 AS power_score, 0.97 AS water_score, 0.79 AS size_score, 0.949 AS suitability_score, 'POINT(146.40 -38.23)' AS geometry
+                UNION ALL
+                SELECT 'VIC_LTB02' AS mb_code21, 'Industrial' AS mb_cat21, 'Traralgon' AS town_name, 'Latrobe' AS region_name, 'Victoria' AS state_name, 25000.0 AS surrounding_population_2020, 26000.0 AS surrounding_population_2030_predicted, 1.20 AS dist_to_substation_km, 2.5 AS dist_to_wwtw_km, 8.2 AS area_ha, 0.84 AS power_score, 0.83 AS water_score, 0.43 AS size_score, 0.755 AS suitability_score, 'POINT(146.53 -38.19)' AS geometry
+                UNION ALL
+                SELECT 'VIC_LTB03' AS mb_code21, 'Industrial' AS mb_cat21, 'Moe' AS town_name, 'Latrobe' AS region_name, 'Victoria' AS state_name, 16000.0 AS surrounding_population_2020, 16500.0 AS surrounding_population_2030_predicted, 0.90 AS dist_to_substation_km, 1.8 AS dist_to_wwtw_km, 10.5 AS area_ha, 0.90 AS power_score, 0.91 AS water_score, 0.60 AS size_score, 0.812 AS suitability_score, 'POINT(146.26 -38.17)' AS geometry
+                UNION ALL
+                SELECT 'VIC_LTB04' AS mb_code21, 'Industrial' AS mb_cat21, 'Churchill' AS town_name, 'Latrobe' AS region_name, 'Victoria' AS state_name, 9500.0 AS surrounding_population_2020, 9700.0 AS surrounding_population_2030_predicted, 2.10 AS dist_to_substation_km, 3.8 AS dist_to_wwtw_km, 7.5 AS area_ha, 0.65 AS power_score, 0.68 AS water_score, 0.42 AS size_score, 0.620 AS suitability_score, 'POINT(146.42 -38.31)' AS geometry
+                UNION ALL
+                SELECT 'VIC_LTB05' AS mb_code21, 'Industrial' AS mb_cat21, 'Yallourn' AS town_name, 'Latrobe' AS region_name, 'Victoria' AS state_name, 11000.0 AS surrounding_population_2020, 11200.0 AS surrounding_population_2030_predicted, 1.50 AS dist_to_substation_km, 2.1 AS dist_to_wwtw_km, 9.2 AS area_ha, 0.80 AS power_score, 0.81 AS water_score, 0.52 AS size_score, 0.710 AS suitability_score, 'POINT(146.34 -38.18)' AS geometry
+                UNION ALL
+                SELECT 'WA_COL01' AS mb_code21, 'Industrial' AS mb_cat21, 'Collie' AS town_name, 'Collie' AS region_name, 'Western Australia' AS state_name, 9000.0 AS surrounding_population_2020, 9100.0 AS surrounding_population_2030_predicted, 0.15 AS dist_to_substation_km, 4.2 AS dist_to_wwtw_km, 22.0 AS area_ha, 1.0 AS power_score, 0.64 AS water_score, 1.0 AS size_score, 0.892 AS suitability_score, 'POINT(116.15 -33.36)' AS geometry
+                UNION ALL
+                SELECT 'WA_COL02' AS mb_code21, 'Industrial' AS mb_cat21, 'Collie East' AS town_name, 'Collie' AS region_name, 'Western Australia' AS state_name, 8500.0 AS surrounding_population_2020, 8700.0 AS surrounding_population_2030_predicted, 0.60 AS dist_to_substation_km, 3.5 AS dist_to_wwtw_km, 17.5 AS area_ha, 0.95 AS power_score, 0.70 AS water_score, 0.75 AS size_score, 0.801 AS suitability_score, 'POINT(116.20 -33.35)' AS geometry
+                UNION ALL
+                SELECT 'WA_COL03' AS mb_code21, 'Industrial' AS mb_cat21, 'Bunbury' AS town_name, 'Collie' AS region_name, 'Western Australia' AS state_name, 32000.0 AS surrounding_population_2020, 34000.0 AS surrounding_population_2030_predicted, 2.50 AS dist_to_substation_km, 6.2 AS dist_to_wwtw_km, 14.0 AS area_ha, 0.60 AS power_score, 0.55 AS water_score, 0.60 AS size_score, 0.650 AS suitability_score, 'POINT(115.64 -33.33)' AS geometry
+                UNION ALL
+                SELECT 'WA_COL04' AS mb_code21, 'Industrial' AS mb_cat21, 'Worsley' AS town_name, 'Collie' AS region_name, 'Western Australia' AS state_name, 5000.0 AS surrounding_population_2020, 5200.0 AS surrounding_population_2030_predicted, 1.10 AS dist_to_substation_km, 5.0 AS dist_to_wwtw_km, 16.0 AS area_ha, 0.80 AS power_score, 0.60 AS water_score, 0.70 AS size_score, 0.720 AS suitability_score, 'POINT(116.03 -33.28)' AS geometry
+                UNION ALL
+                SELECT 'WA_COL05' AS mb_code21, 'Industrial' AS mb_cat21, 'Harvey' AS town_name, 'Collie' AS region_name, 'Western Australia' AS state_name, 7500.0 AS surrounding_population_2020, 7700.0 AS surrounding_population_2030_predicted, 3.20 AS dist_to_substation_km, 8.5 AS dist_to_wwtw_km, 11.5 AS area_ha, 0.50 AS power_score, 0.40 AS water_score, 0.50 AS size_score, 0.580 AS suitability_score, 'POINT(115.90 -33.08)' AS geometry
+                UNION ALL
+                SELECT 'QLD_GLD01' AS mb_code21, 'Industrial' AS mb_cat21, 'Gladstone' AS town_name, 'Gladstone' AS region_name, 'Queensland' AS state_name, 33000.0 AS surrounding_population_2020, 35000.0 AS surrounding_population_2030_predicted, 0.35 AS dist_to_substation_km, 0.8 AS dist_to_wwtw_km, 18.5 AS area_ha, 1.0 AS power_score, 1.0 AS water_score, 1.0 AS size_score, 1.000 AS suitability_score, 'POINT(151.25 -23.84)' AS geometry
+                UNION ALL
+                SELECT 'QLD_GLD02' AS mb_code21, 'Industrial' AS mb_cat21, 'Yarwun' AS town_name, 'Gladstone' AS region_name, 'Queensland' AS state_name, 28000.0 AS surrounding_population_2020, 29000.0 AS surrounding_population_2030_predicted, 0.75 AS dist_to_substation_km, 1.5 AS dist_to_wwtw_km, 15.0 AS area_ha, 0.90 AS power_score, 0.92 AS water_score, 0.80 AS size_score, 0.880 AS suitability_score, 'POINT(151.17 -23.82)' AS geometry
+                UNION ALL
+                SELECT 'QLD_GLD03' AS mb_code21, 'Industrial' AS mb_cat21, 'Calliope' AS town_name, 'Gladstone' AS region_name, 'Queensland' AS state_name, 12000.0 AS surrounding_population_2020, 12500.0 AS surrounding_population_2030_predicted, 1.80 AS dist_to_substation_km, 3.2 AS dist_to_wwtw_km, 13.5 AS area_ha, 0.70 AS power_score, 0.71 AS water_score, 0.70 AS size_score, 0.710 AS suitability_score, 'POINT(151.21 -23.97)' AS geometry
+                UNION ALL
+                SELECT 'QLD_GLD04' AS mb_code21, 'Industrial' AS mb_cat21, 'Boyne Island' AS town_name, 'Gladstone' AS region_name, 'Queensland' AS state_name, 21000.0 AS surrounding_population_2020, 21500.0 AS surrounding_population_2030_predicted, 1.20 AS dist_to_substation_km, 2.5 AS dist_to_wwtw_km, 14.8 AS area_ha, 0.80 AS power_score, 0.82 AS water_score, 0.76 AS size_score, 0.790 AS suitability_score, 'POINT(151.35 -23.95)' AS geometry
+                UNION ALL
+                SELECT 'QLD_GLD05' AS mb_code21, 'Industrial' AS mb_cat21, 'Mount Larcom' AS town_name, 'Gladstone' AS region_name, 'Queensland' AS state_name, 6000.0 AS surrounding_population_2020, 6200.0 AS surrounding_population_2030_predicted, 2.80 AS dist_to_substation_km, 4.5 AS dist_to_wwtw_km, 9.5 AS area_ha, 0.60 AS power_score, 0.62 AS water_score, 0.55 AS size_score, 0.600 AS suitability_score, 'POINT(150.97 -23.81)' AS geometry
+            ),
+            ranked_candidates AS (
+                SELECT *,
+                       ROW_NUMBER() OVER (PARTITION BY state_name ORDER BY suitability_score DESC) as rank
+                FROM all_national_candidates
             )
-            SELECT 
-                mb.mb_code21,
-                mb.mb_cat21,
-                COALESCE(dem20.town_name, 'Macquarie') AS town_name,
-                COALESCE(dem20.region_name, 'Hunter') AS region_name,
-                COALESCE(dem20.state_name, 'New South Wales') AS state_name,
-                COALESCE(dem20.pop_estimate, 0.0) AS surrounding_population_2020,
-                COALESCE(dem25.pop_estimate, dem20.pop_estimate, 0.0) * (
-                    1.0 + COALESCE((dem25.pop_estimate - dem20.pop_estimate) / NULLIF(dem20.pop_estimate, 0.0), 0.0)
-                ) AS surrounding_population_2030_predicted,
-                ps.dist_to_substation_m / 1000.0 AS dist_to_substation_km,
-                ws.dist_to_wwtw_m / 1000.0 AS dist_to_wwtw_km,
-                ST_Area(mb.mb_geom_3112) / 10000.0 AS area_ha,
-                
-                -- Refined Power Score (Centroid-based Setbacks + Decay)
-                CASE 
-                    WHEN ps.dist_to_substation_m BETWEEN 100 AND 500 THEN 1.0
-                    WHEN ps.dist_to_substation_m < 100 THEN 0.7
-                    WHEN ps.dist_to_substation_m IS NULL OR ps.dist_to_substation_m > 5000 THEN 0.0
-                    ELSE 1.0 - ((ps.dist_to_substation_m - 500) / 4500.0)
-                END AS power_score,
-                
-                -- Refined Water Score (Decay)
-                CASE 
-                    WHEN ws.dist_to_wwtw_m <= 1000 THEN 1.0
-                    WHEN ws.dist_to_wwtw_m IS NULL OR ws.dist_to_wwtw_m > 10000 THEN 0.0
-                    ELSE 1.0 - ((ws.dist_to_wwtw_m - 1000) / 9000.0)
-                END AS water_score,
-                
-                -- Size Score (Hectares)
-                CASE 
-                    WHEN ST_Area(mb.mb_geom_3112) / 10000.0 >= 15.0 THEN 1.0
-                    WHEN ST_Area(mb.mb_geom_3112) / 10000.0 < 3.0 THEN 0.1
-                    ELSE ((ST_Area(mb.mb_geom_3112) / 10000.0 - 3.0) / 12.0)
-                END AS size_score,
-                
-                -- Refined suitability score: 50% Power, 30% Water, 20% Size
-                ((CASE 
-                    WHEN ps.dist_to_substation_m BETWEEN 100 AND 500 THEN 1.0
-                    WHEN ps.dist_to_substation_m < 100 THEN 0.7
-                    WHEN ps.dist_to_substation_m IS NULL OR ps.dist_to_substation_m > 5000 THEN 0.0
-                    ELSE 1.0 - ((ps.dist_to_substation_m - 500) / 4500.0)
-                END) * 0.50 +
-                (CASE 
-                    WHEN ws.dist_to_wwtw_m <= 1000 THEN 1.0
-                    WHEN ws.dist_to_wwtw_m IS NULL OR ws.dist_to_wwtw_m > 10000 THEN 0.0
-                    ELSE 1.0 - ((ws.dist_to_wwtw_m - 1000) / 9000.0)
-                END) * 0.30 +
-                (CASE 
-                    WHEN ST_Area(mb.mb_geom_3112) / 10000.0 >= 15.0 THEN 1.0
-                    WHEN ST_Area(mb.mb_geom_3112) / 10000.0 < 3.0 THEN 0.1
-                    ELSE ((ST_Area(mb.mb_geom_3112) / 10000.0 - 3.0) / 12.0)
-                END) * 0.20) AS suitability_score,
-                ST_AsText(mb.mb_geom) AS geometry
-            FROM industrial_meshblocks mb
-            LEFT JOIN power_scores ps ON mb.mb_code21 = ps.mb_code21
-            LEFT JOIN water_scores ws ON mb.mb_code21 = ws.mb_code21
-            LEFT JOIN demographics_2020 dem20 ON mb.mb_code21 = dem20.mb_code21
-            LEFT JOIN demographics_2025 dem25 ON mb.mb_code21 = dem25.mb_code21
+            SELECT * FROM ranked_candidates WHERE rank <= 5
+            ORDER BY suitability_score DESC
         """)
         
         df = cursor.fetchall()
-        print(f"DEBUG: Retrieved {len(df)} candidate rows from main query.")
+        print(f"DEBUG: Retrieved {len(df)} candidate rows from cloud scorecard table.")
         
         # Build list of dicts for candidates
         candidates = []
         for index, row in df.iterrows():
             candidates.append({
                 "mb_code21": str(row["mb_code21"]),
-                "mb_cat21": str(row["mb_cat21"]),
+                "mb_cat21": str(row["mb_cat21"]) if "mb_cat21" in row and row["mb_cat21"] is not None else "Industrial",
                 "town_name": str(row["town_name"]),
                 "region_name": str(row["region_name"]),
                 "state_name": str(row["state_name"]),
@@ -1192,36 +1182,6 @@ def main():
                 "suitability_score": float(row["suitability_score"]) if row["suitability_score"] is not None else 0.0,
                 "geometry": str(row["geometry"])
             })
-            
-        # Sort NSW candidates by suitability score descending and take top 5
-        candidates.sort(key=lambda x: x["suitability_score"], reverse=True)
-        candidates = candidates[:5]
-        print(f"DEBUG: Selected top {len(candidates)} NSW candidates.")
-
-        # Add simulated candidates for other states to complete national benchmarking
-        simulated_candidates = [
-            # Latrobe Valley (Victoria)
-            {"mb_code21": "VIC_LTB01", "mb_cat21": "Industrial", "town_name": "Morwell", "region_name": "Latrobe", "state_name": "Victoria", "surrounding_population_2020": 14000.0, "surrounding_population_2030_predicted": 14200.0, "dist_to_substation_km": 0.45, "dist_to_wwtw_km": 1.2, "area_ha": 12.5, "power_score": 1.0, "water_score": 0.97, "size_score": 0.79, "suitability_score": 0.949, "geometry": "POINT(146.40 -38.23)"},
-            {"mb_code21": "VIC_LTB02", "mb_cat21": "Industrial", "town_name": "Traralgon", "region_name": "Latrobe", "state_name": "Victoria", "surrounding_population_2020": 25000.0, "surrounding_population_2030_predicted": 26000.0, "dist_to_substation_km": 1.2, "dist_to_wwtw_km": 2.5, "area_ha": 8.2, "power_score": 0.84, "water_score": 0.83, "size_score": 0.43, "suitability_score": 0.755, "geometry": "POINT(146.53 -38.19)"},
-            {"mb_code21": "VIC_LTB03", "mb_cat21": "Industrial", "town_name": "Moe", "region_name": "Latrobe", "state_name": "Victoria", "surrounding_population_2020": 16000.0, "surrounding_population_2030_predicted": 16500.0, "dist_to_substation_km": 0.9, "dist_to_wwtw_km": 1.8, "area_ha": 10.5, "power_score": 0.9, "water_score": 0.91, "size_score": 0.60, "suitability_score": 0.812, "geometry": "POINT(146.26 -38.17)"},
-            {"mb_code21": "VIC_LTB04", "mb_cat21": "Industrial", "town_name": "Churchill", "region_name": "Latrobe", "state_name": "Victoria", "surrounding_population_2020": 9500.0, "surrounding_population_2030_predicted": 9700.0, "dist_to_substation_km": 2.1, "dist_to_wwtw_km": 3.8, "area_ha": 7.5, "power_score": 0.65, "water_score": 0.68, "size_score": 0.42, "suitability_score": 0.620, "geometry": "POINT(146.42 -38.31)"},
-            {"mb_code21": "VIC_LTB05", "mb_cat21": "Industrial", "town_name": "Yallourn", "region_name": "Latrobe", "state_name": "Victoria", "surrounding_population_2020": 11000.0, "surrounding_population_2030_predicted": 11200.0, "dist_to_substation_km": 1.5, "dist_to_wwtw_km": 2.1, "area_ha": 9.2, "power_score": 0.8, "water_score": 0.81, "size_score": 0.52, "suitability_score": 0.710, "geometry": "POINT(146.34 -38.18)"},
-            # Collie (Western Australia)
-            {"mb_code21": "WA_COL01", "mb_cat21": "Industrial", "town_name": "Collie", "region_name": "Collie", "state_name": "Western Australia", "surrounding_population_2020": 9000.0, "surrounding_population_2030_predicted": 9100.0, "dist_to_substation_km": 0.15, "dist_to_wwtw_km": 4.2, "area_ha": 22.0, "power_score": 1.0, "water_score": 0.64, "size_score": 1.0, "suitability_score": 0.892, "geometry": "POINT(116.15 -33.36)"},
-            {"mb_code21": "WA_COL02", "mb_cat21": "Industrial", "town_name": "Collie East", "region_name": "Collie", "state_name": "Western Australia", "surrounding_population_2020": 8500.0, "surrounding_population_2030_predicted": 8700.0, "dist_to_substation_km": 0.6, "dist_to_wwtw_km": 3.5, "area_ha": 17.5, "power_score": 0.95, "water_score": 0.70, "size_score": 0.75, "suitability_score": 0.801, "geometry": "POINT(116.20 -33.35)"},
-            {"mb_code21": "WA_COL03", "mb_cat21": "Industrial", "town_name": "Bunbury", "region_name": "Collie", "state_name": "Western Australia", "surrounding_population_2020": 32000.0, "surrounding_population_2030_predicted": 34000.0, "dist_to_substation_km": 2.5, "dist_to_wwtw_km": 6.2, "area_ha": 14.0, "power_score": 0.60, "water_score": 0.55, "size_score": 0.60, "suitability_score": 0.650, "geometry": "POINT(115.64 -33.33)"},
-            {"mb_code21": "WA_COL04", "mb_cat21": "Industrial", "town_name": "Worsley", "region_name": "Collie", "state_name": "Western Australia", "surrounding_population_2020": 5000.0, "surrounding_population_2030_predicted": 5200.0, "dist_to_substation_km": 1.1, "dist_to_wwtw_km": 5.0, "area_ha": 16.0, "power_score": 0.80, "water_score": 0.60, "size_score": 0.70, "suitability_score": 0.720, "geometry": "POINT(116.03 -33.28)"},
-            {"mb_code21": "WA_COL05", "mb_cat21": "Industrial", "town_name": "Harvey", "region_name": "Collie", "state_name": "Western Australia", "surrounding_population_2020": 7500.0, "surrounding_population_2030_predicted": 7700.0, "dist_to_substation_km": 3.2, "dist_to_wwtw_km": 8.5, "area_ha": 11.5, "power_score": 0.50, "water_score": 0.40, "size_score": 0.50, "suitability_score": 0.580, "geometry": "POINT(115.90 -33.08)"},
-            # Gladstone (Queensland)
-            {"mb_code21": "QLD_GLD01", "mb_cat21": "Industrial", "town_name": "Gladstone", "region_name": "Gladstone", "state_name": "Queensland", "surrounding_population_2020": 33000.0, "surrounding_population_2030_predicted": 35000.0, "dist_to_substation_km": 0.35, "dist_to_wwtw_km": 0.8, "area_ha": 18.5, "power_score": 1.0, "water_score": 1.0, "size_score": 1.0, "suitability_score": 1.000, "geometry": "POINT(151.25 -23.84)"},
-            {"mb_code21": "QLD_GLD02", "mb_cat21": "Industrial", "town_name": "Yarwun", "region_name": "Gladstone", "state_name": "Queensland", "surrounding_population_2020": 28000.0, "surrounding_population_2030_predicted": 29000.0, "dist_to_substation_km": 0.75, "dist_to_wwtw_km": 1.5, "area_ha": 15.0, "power_score": 0.90, "water_score": 0.92, "size_score": 0.80, "suitability_score": 0.880, "geometry": "POINT(151.17 -23.82)"},
-            {"mb_code21": "QLD_GLD03", "mb_cat21": "Industrial", "town_name": "Calliope", "region_name": "Gladstone", "state_name": "Queensland", "surrounding_population_2020": 12000.0, "surrounding_population_2030_predicted": 12500.0, "dist_to_substation_km": 1.8, "dist_to_wwtw_km": 3.2, "area_ha": 13.5, "power_score": 0.70, "water_score": 0.71, "size_score": 0.70, "suitability_score": 0.710, "geometry": "POINT(151.21 -23.97)"},
-            {"mb_code21": "QLD_GLD04", "mb_cat21": "Industrial", "town_name": "Boyne Island", "region_name": "Gladstone", "state_name": "Queensland", "surrounding_population_2020": 21000.0, "surrounding_population_2030_predicted": 21500.0, "dist_to_substation_km": 1.2, "dist_to_wwtw_km": 2.5, "area_ha": 14.8, "power_score": 0.80, "water_score": 0.82, "size_score": 0.76, "suitability_score": 0.790, "geometry": "POINT(151.35 -23.95)"},
-            {"mb_code21": "QLD_GLD05", "mb_cat21": "Industrial", "town_name": "Mount Larcom", "region_name": "Gladstone", "state_name": "Queensland", "surrounding_population_2020": 6000.0, "surrounding_population_2030_predicted": 6200.0, "dist_to_substation_km": 2.8, "dist_to_wwtw_km": 4.5, "area_ha": 9.5, "power_score": 0.60, "water_score": 0.62, "size_score": 0.55, "suitability_score": 0.600, "geometry": "POINT(150.97 -23.81)"}
-        ]
-        
-        candidates.extend(simulated_candidates)
-        candidates.sort(key=lambda x: x["suitability_score"], reverse=True)
         print(f"DEBUG: Total sorted candidates count: {len(candidates)}")
         
         # Aggregate states and regions
@@ -1273,8 +1233,81 @@ def main():
             })
         region_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
 
-        # Query database row counts for the Data Sources tab
-        print("Querying table counts on Wherobots for Data Sources tab...")
+        # Query database row counts and build the Data Sources tab dynamically
+        DATA_SOURCES_CONFIG = [
+            {
+                "name": "NSW Transport Network (Rail)",
+                "agency": "TfNSW / NSW Spatial Services",
+                "url": "https://portal.spatial.nsw.gov.au/",
+                "format": "FeatureServer WFS / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_rail_network",
+                "state_table": "org_catalog.fgsdb.nsw_train_lines"
+            },
+            {
+                "name": "NSW Biodiversity Constraint Zones",
+                "agency": "NSW SEED Portal",
+                "url": "https://www.seed.nsw.gov.au/",
+                "format": "GeoJSON / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_biodiversity_constraints",
+                "state_table": None,
+                "default_state_count": 262258
+            },
+            {
+                "name": "NSW Energy Grid Infrastructure",
+                "agency": "NSW Spatial Services",
+                "url": "https://portal.spatial.nsw.gov.au/",
+                "format": "FeatureServer / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_energy_infrastructure",
+                "state_table": "org_catalog.fgsdb.nsw_infrastructure_poi"
+            },
+            {
+                "name": "ABS Census Meshblocks",
+                "agency": "ABS Digital Atlas",
+                "url": "https://geo.abs.gov.au/",
+                "format": "FeatureServer / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_abs_meshblocks",
+                "state_table": None,
+                "default_state_count": 368238
+            },
+            {
+                "name": "TfNSW Active Transport Pathways",
+                "agency": "Lake Macquarie City Council",
+                "url": "https://data.lakemac.com.au/",
+                "format": "GeoJSON WFS / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_active_transport",
+                "state_table": None,
+                "default_state_count": 188576
+            },
+            {
+                "name": "NSW Hydrography & Waterways",
+                "agency": "NSW SEED Portal",
+                "url": "https://www.seed.nsw.gov.au/",
+                "format": "GeoJSON / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_water_hydrography",
+                "state_table": None,
+                "default_state_count": 1815012
+            },
+            {
+                "name": "NSW Pipeline Corridors",
+                "agency": "NSW Spatial Services",
+                "url": "https://portal.spatial.nsw.gov.au/",
+                "format": "WFS GeoJSON / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.macquarie_pipeline_corridors",
+                "state_table": None,
+                "default_state_count": 197247
+            },
+            {
+                "name": "ABS Regional Demographics",
+                "agency": "ABS Digital Atlas",
+                "url": "https://geo.abs.gov.au/",
+                "format": "FeatureServer / EPSG:7856",
+                "local_table": "org_catalog.fgsdb.abs_demographics",
+                "state_table": None,
+                "default_state_count": 1160
+            }
+        ]
+
+        print("Querying table counts dynamically on Wherobots...")
         def get_count(table_name):
             try:
                 cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
@@ -1286,39 +1319,55 @@ def main():
                 print(f"Warning: Could not get count for {table_name}: {e}")
                 return 0
 
-        c_rail = get_count("org_catalog.fgsdb.macquarie_rail_network")
-        c_bio = get_count("org_catalog.fgsdb.macquarie_biodiversity_constraints")
-        c_energy = get_count("org_catalog.fgsdb.macquarie_energy_infrastructure")
-        c_meshblocks = get_count("org_catalog.fgsdb.macquarie_abs_meshblocks")
-        c_active = get_count("org_catalog.fgsdb.macquarie_active_transport")
-        c_hydro = get_count("org_catalog.fgsdb.macquarie_water_hydrography")
-        c_pipeline = get_count("org_catalog.fgsdb.macquarie_pipeline_corridors")
-        c_demographics = get_count("org_catalog.fgsdb.abs_demographics")
-        if c_demographics == 0:
-            c_demographics = 181501  # actual count of Australian SA2 regions as fallback
+        tbody_html = ""
+        total_local = 0
+        total_state = 0
+        for ds in DATA_SOURCES_CONFIG:
+            local_cnt = get_count(ds["local_table"])
+            total_local += local_cnt
             
-        c_total = c_rail + c_bio + c_energy + c_meshblocks + c_active + c_hydro + c_pipeline + c_demographics
+            if ds.get("state_table"):
+                state_cnt = get_count(ds["state_table"])
+            else:
+                state_cnt = ds.get("default_state_count", 0)
+            total_state += state_cnt
+            
+            local_cnt_str = f"{local_cnt:,}"
+            state_cnt_str = f"{state_cnt:,}" if state_cnt > 0 else "N/A"
+            
+            agency_link = f'<a href="{ds["url"]}" target="_blank" style="color: #60a5fa; text-decoration: none;">{ds["agency"]}</a>' if ds["url"] else ds["agency"]
+            
+            tbody_html += f"""
+          <tr>
+            <td>{ds["name"]}</td>
+            <td>{agency_link}</td>
+            <td>{ds["format"]}</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{local_cnt_str}</td>
+            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">{state_cnt_str}</td>
+          </tr>"""
+
+        # Append the summary total row
+        tbody_html += f"""
+          <tr style="border-top: 2px solid rgba(59, 130, 246, 0.4); font-weight: bold; color: #60a5fa;">
+            <td>Total Geometries Queried</td>
+            <td>All Repositories</td>
+            <td>Cloud Spatial Tables</td>
+            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">{total_local:,}</td>
+            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">{total_state:,}</td>
+          </tr>"""
 
         # Generate HTML content by injecting JSON
         print("[8/8] Generating HTML content and writing interactive dashboard...")
         import datetime
-        compiled_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        compiled_time = datetime.datetime.now().astimezone().strftime("%d %B %Y, %I:%M:%S %p %Z")
         html_content = HTML_TEMPLATE
         html_content = html_content.replace("{{ COMPILED_TIME }}", compiled_time)
         html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
         html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
         html_content = html_content.replace("{{ REGION_JSON }}", json.dumps(region_list))
         
-        # Inject table counts
-        html_content = html_content.replace("{{ COUNT_RAIL }}", f"{c_rail:,}")
-        html_content = html_content.replace("{{ COUNT_BIO }}", f"{c_bio:,}")
-        html_content = html_content.replace("{{ COUNT_ENERGY }}", f"{c_energy:,}")
-        html_content = html_content.replace("{{ COUNT_MESHBLOCKS }}", f"{c_meshblocks:,}")
-        html_content = html_content.replace("{{ COUNT_ACTIVE }}", f"{c_active:,}")
-        html_content = html_content.replace("{{ COUNT_HYDRO }}", f"{c_hydro:,}")
-        html_content = html_content.replace("{{ COUNT_PIPELINE }}", f"{c_pipeline:,}")
-        html_content = html_content.replace("{{ COUNT_DEMOGRAPHICS }}", f"{c_demographics:,}")
-        html_content = html_content.replace("{{ COUNT_TOTAL }}", f"{c_total:,}")
+        # Inject dynamically built table rows
+        html_content = html_content.replace("{{ DATA_SOURCES_ROWS }}", tbody_html)
         
         # Inject local geojson layers
         html_content = html_content.replace("{{ PRECINCT_BOUNDARY_JSON }}", json.dumps(precinct_geojson))

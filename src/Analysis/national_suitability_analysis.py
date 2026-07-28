@@ -237,6 +237,15 @@ def main():
     individual_pdf = spark.sql("SELECT * FROM all_national_candidates ORDER BY suitability_score DESC LIMIT 20").toPandas()
     print(individual_pdf.to_json(orient="records"))
     print("===END_SUITABILITY_TABLE===")
+    
+    # Save the computed national candidates scorecard as a permanent database table
+    print("[national] Saving all national candidates scorecard to Havasu database table...")
+    try:
+        all_candidates_sdf = spark.table("all_national_candidates")
+        all_candidates_sdf.write.format("havasu").mode("overwrite").save("org_catalog.fgsdb.all_national_candidates")
+        print("[national] Successfully saved Havasu table: org_catalog.fgsdb.all_national_candidates")
+    except Exception as exc:
+        print(f"[national] Error saving Havasu table org_catalog.fgsdb.all_national_candidates: {exc}")
 
     print("===START_STATE_TABLE===")
     state_pdf = spark.sql("""
