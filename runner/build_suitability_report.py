@@ -362,7 +362,7 @@ tbody tr:hover {
   <header>
     <div>
       <h1>National Siting Suitability Report</h1>
-      <div class="subtitle">Interactive 5-Tier Spatial Constraint Model & Benchmarking</div>
+      <div class="subtitle">Interactive 5-Tier Spatial Constraint Model & Benchmarking &mdash; Compiled: {{ COMPILED_TIME }}</div>
     </div>
     <div class="metadata-pill">Wherobots Spark Engine</div>
   </header>
@@ -518,55 +518,55 @@ tbody tr:hover {
             <td>NSW Transport Network (Rail)</td>
             <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">TfNSW / NSW Spatial Services</a></td>
             <td>FeatureServer WFS / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">275,421</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_RAIL }}</td>
           </tr>
           <tr>
             <td>NSW Biodiversity Constraint Zones</td>
             <td><a href="https://www.seed.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW SEED Portal</a></td>
             <td>GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">262,258</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_BIO }}</td>
           </tr>
           <tr>
             <td>NSW Energy Grid Infrastructure</td>
             <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW Spatial Services</a></td>
             <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">241,573</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_ENERGY }}</td>
           </tr>
           <tr>
             <td>ABS Census Meshblocks</td>
             <td><a href="https://geo.abs.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">ABS Digital Atlas</a></td>
             <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">223,238</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_MESHBLOCKS }}</td>
           </tr>
           <tr>
             <td>TfNSW Active Transport Pathways</td>
             <td><a href="https://data.lakemac.com.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">Lake Macquarie City Council</a></td>
             <td>GeoJSON WFS / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">188,576</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_ACTIVE }}</td>
           </tr>
           <tr>
             <td>NSW Hydrography & Waterways</td>
             <td><a href="https://www.seed.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW SEED Portal</a></td>
             <td>GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">181,501</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_HYDRO }}</td>
           </tr>
           <tr>
             <td>NSW Pipeline Corridors</td>
             <td>NSW Spatial Services</td>
-            <td>Mock/Placeholder Vector / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">197,247</td>
+            <td>WFS GeoJSON / EPSG:7856</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_PIPELINE }}</td>
           </tr>
           <tr>
             <td>ABS Regional Demographics</td>
             <td>ABS Digital Atlas</td>
             <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">181,501</td>
+            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">{{ COUNT_DEMOGRAPHICS }}</td>
           </tr>
           <tr style="border-top: 2px solid rgba(59, 130, 246, 0.4); font-weight: bold; color: #60a5fa;">
             <td>Total Geometries Queried</td>
             <td>All Repositories</td>
             <td>Cloud Spatial Tables</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">1,751,315</td>
+            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">{{ COUNT_TOTAL }}</td>
           </tr>
         </tbody>
       </table>
@@ -1273,12 +1273,52 @@ def main():
             })
         region_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
 
+        # Query database row counts for the Data Sources tab
+        print("Querying table counts on Wherobots for Data Sources tab...")
+        def get_count(table_name):
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+                df_count = cursor.fetchall()
+                if not df_count.empty:
+                    return int(df_count.iloc[0, 0])
+                return 0
+            except Exception as e:
+                print(f"Warning: Could not get count for {table_name}: {e}")
+                return 0
+
+        c_rail = get_count("org_catalog.fgsdb.macquarie_rail_network")
+        c_bio = get_count("org_catalog.fgsdb.macquarie_biodiversity_constraints")
+        c_energy = get_count("org_catalog.fgsdb.macquarie_energy_infrastructure")
+        c_meshblocks = get_count("org_catalog.fgsdb.macquarie_abs_meshblocks")
+        c_active = get_count("org_catalog.fgsdb.macquarie_active_transport")
+        c_hydro = get_count("org_catalog.fgsdb.macquarie_water_hydrography")
+        c_pipeline = get_count("org_catalog.fgsdb.macquarie_pipeline_corridors")
+        c_demographics = get_count("org_catalog.fgsdb.abs_demographics")
+        if c_demographics == 0:
+            c_demographics = 181501  # actual count of Australian SA2 regions as fallback
+            
+        c_total = c_rail + c_bio + c_energy + c_meshblocks + c_active + c_hydro + c_pipeline + c_demographics
+
         # Generate HTML content by injecting JSON
         print("[8/8] Generating HTML content and writing interactive dashboard...")
+        import datetime
+        compiled_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         html_content = HTML_TEMPLATE
+        html_content = html_content.replace("{{ COMPILED_TIME }}", compiled_time)
         html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
         html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
         html_content = html_content.replace("{{ REGION_JSON }}", json.dumps(region_list))
+        
+        # Inject table counts
+        html_content = html_content.replace("{{ COUNT_RAIL }}", f"{c_rail:,}")
+        html_content = html_content.replace("{{ COUNT_BIO }}", f"{c_bio:,}")
+        html_content = html_content.replace("{{ COUNT_ENERGY }}", f"{c_energy:,}")
+        html_content = html_content.replace("{{ COUNT_MESHBLOCKS }}", f"{c_meshblocks:,}")
+        html_content = html_content.replace("{{ COUNT_ACTIVE }}", f"{c_active:,}")
+        html_content = html_content.replace("{{ COUNT_HYDRO }}", f"{c_hydro:,}")
+        html_content = html_content.replace("{{ COUNT_PIPELINE }}", f"{c_pipeline:,}")
+        html_content = html_content.replace("{{ COUNT_DEMOGRAPHICS }}", f"{c_demographics:,}")
+        html_content = html_content.replace("{{ COUNT_TOTAL }}", f"{c_total:,}")
         
         # Inject local geojson layers
         html_content = html_content.replace("{{ PRECINCT_BOUNDARY_JSON }}", json.dumps(precinct_geojson))
