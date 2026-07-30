@@ -34,6 +34,34 @@ To configure the Wherobots MCP server manually in your editor:
   - `ST_Contains(a, b)`, `ST_Intersects(a, b)`: Perform spatial predicate checks.
   - `ST_Area(geom)`: Computes metric or degree area.
 
-## 4. Resource Management
-- **Tiny Runtime**: The Wherobots MCP server runs on a Tiny runtime by default. Sessions terminate after 5 minutes of inactivity.
-- **Stopping Server**: Stop the server via **MCP: List Servers** -> **Stop Server** when not active to minimize Spatial Unit (SU) consumption.
+## 4. Resource Management & Cost Protection Cheat Sheet
+
+> [!CAUTION]
+> **Avoid Unintentional Billing Blowouts**: Interactive General Purpose SUs bill continuously per hour while a runtime session remains open (e.g. $1.50+/SU-hour). Always follow these safety rules.
+
+1. **Prefer Headless Batch Execution (`WherobotsJob`) Over Interactive Runtimes**:
+   - Use `WherobotsJob(runtime="tiny")` for routine ETL and analysis runs.
+   - Batch jobs automatically terminate as soon as the script exits, charging only for active execution time (typically $0.05–$0.20 per run vs $100s for idle interactive sessions).
+
+2. **Explicit Session Teardown (`spark.stop()` / `sedona.stop()`)**:
+   - Always wrap PySpark / Sedona execution in a `try...finally` block in Python scripts:
+     ```python
+     sedona = SedonaContext.create(SedonaContext.builder().getOrCreate())
+     try:
+         # Spatial transformations and queries...
+         pass
+     finally:
+         sedona.stop()
+     ```
+
+3. **Managing Interactive MCP Server & Notebook Sessions**:
+   - **Wherobots MCP Server**: Keep the server stopped when not actively executing queries (`MCP: List Servers` -> `Stop Server`).
+   - **Session Idle Timeouts**: Configure interactive session auto-shutdown in Wherobots Cloud console to **5 minutes** of inactivity.
+   - **Kernel Shutdown**: Explicitly shut down Jupyter notebook kernels immediately after completing interactive spatial exploration.
+
+4. **Spatial Query & I/O Optimization**:
+   - **Spatial Envelope Filtering**: Filter bounding boxes (`ST_Intersects(geom, ST_MakeEnvelope(...))`) BEFORE running heavy spatial operations (`ST_Buffer`, `ST_Intersection`).
+   - **Avoid `SELECT *`**: Request only specific columns to enable Parquet/Havasu projection pushdown.
+   - **DataFrame Caching**: Call `.cache()` on complex intermediate geometry DataFrames that are evaluated multiple times, and `.unpersist()` when complete.
+   - **Single Region Lock**: Standardize environment configuration to a single cloud region (e.g., `aws-us-west-2`) to avoid running concurrent runtime clusters across multiple regions.
+

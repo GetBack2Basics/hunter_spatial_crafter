@@ -160,45 +160,104 @@ def main():
         
     # Infrastructure
     if not energy_gdf.empty:
-        energy_gdf.plot(ax=ax, color="#f1c40f", linewidth=1.8, alpha=0.8, label="Electricity lines (HV)")
-    if not rail_gdf.empty:
-        rail_gdf.plot(ax=ax, color="#e74c3c", linewidth=2.5, label="Active Railway network")
+    try:
+        print("[analysis] Loading zones and computing spatial metrics...")
         
-    # Developable Zones (suitability ranking colored)
-    if not net_developable_gdf.empty:
-        # Merge suitability scores to spatial dataframe
-        net_developable_gdf = net_developable_gdf.merge(metrics_df, on="precinct_key")
-        net_developable_gdf.plot(
-            ax=ax, 
-            column="suitability_score", 
-            cmap="Oranges", 
-            edgecolor="#e67e22", 
-            linewidth=3.0, 
-            legend=True, 
-            legend_kwds={'label': "Data Center Suitability Score"},
-            label="Developable Zones"
-        )
+        # 1. Load boundaries and infrastructure
+        precinct_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_precinct_boundary"))
+        study_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_study_area_boundary"))
+        net_developable_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(net_developable_geom) as geometry, precinct_key FROM org_catalog.fgsdb.macquarie_net_developable_zones"))
+        energy_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_energy_infrastructure"))
+        rail_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry, layer FROM org_catalog.fgsdb.macquarie_rail_network"))
+        water_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_water_hydrography LIMIT 1000"))
         
-    plt.title("Macquarie Precinct Data Center Suitability Analysis", fontsize=14, fontweight="bold")
-    plt.xlabel("Easting (m) - EPSG:7856", fontsize=10)
-    plt.ylabel("Northing (m) - EPSG:7856", fontsize=10)
-    plt.grid(True, which='both', color='#ecf0f1', linestyle='-', linewidth=0.5)
-    
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), loc="upper right")
-    
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=60, bbox_inches='tight')
-    buf.seek(0)
-    img_str = base64.b64encode(buf.read()).decode('utf-8')
-    
-    print("===START_B64_IMAGE===")
-    chunk_size = 80
-    for i in range(0, len(img_str), chunk_size):
-        print(img_str[i:i+chunk_size])
-    print("===END_B64_IMAGE===")
-    print("[analysis] Analysis job finished successfully.")
+        metrics = []
+        for idx, row in net_developable_gdf.iterrows():
+            geom = row.geometry
+            if geom is None:
+                continue
+            
+            # Area in Hectares (EPSG:7856 is in meters)
+            area_ha = geom.area / 10000.0
+            
+            # Distance to Energy Infrastructure
+            dist_energy = energy_gdf.distance(geom).min() if len(energy_gdf) > 0 else 99999.0
+            
+            # Distance to Water
+            dist_water = water_gdf.distance(geom).min() if len(water_gdf) > 0 else 99999.0
+            
+            # Distance to Rail
+            dist_rail = rail_gdf.distance(geom).min() if len(rail_gdf) > 0 else 99999.0
+            
+            # Sub-scores
+            s_power = score_power(dist_energy)
+            s_size = score_size(area_ha)
+            
+            # Overall Suitability Score (0 - 100)
+            overall_score = round((s_power * 0.6) + (s_size * 0.4), 1)
+            
+            metrics.append({
+                "precinct_key": row["precinct_key"],
+                "area_ha": round(area_ha, 2),
+                "dist_energy_m": round(dist_energy, 1),
+                "dist_water_m": round(dist_water, 1),
+                "dist_rail_m": round(dist_rail, 1),
+                "suitability_score": overall_score
+            })
+            
+        metrics_df = pd.DataFrame(metrics)
+        print("\n[analysis] Data Center Suitability Analysis Metrics:")
+        print(metrics_df.to_string(index=False))
+        
+        # 2. Render plot
+        fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
+        
+        # Plot study area and precinct boundary
+        if len(study_gdf) > 0:
+            study_gdf.plot(ax=ax, color="#f8f9fa", edgecolor="#bdc3c7", linestyle="--", label="Study Area (5km)")
+        if len(precinct_gdf) > 0:
+            precinct_gdf.plot(ax=ax, color="none", edgecolor="#2c3e50", linewidth=2, label="Precinct Boundary")
+        if len(energy_gdf) > 0:
+            energy_gdf.plot(ax=ax, color="#e74c3c", linewidth=1.5, label="High-Voltage Transmission")
+        if len(rail_gdf) > 0:
+            rail_gdf.plot(ax=ax, color="#34495e", linewidth=1.2, linestyle=":", label="Rail Infrastructure")
+            
+        if len(net_developable_gdf) > 0:
+            net_developable_gdf = net_developable_gdf.merge(metrics_df, on="precinct_key")
+            net_developable_gdf.plot(
+                ax=ax, 
+                column="suitability_score", 
+                cmap="Oranges", 
+                edgecolor="#e67e22", 
+                linewidth=3.0, 
+                legend=True, 
+                legend_kwds={'label': "Data Center Suitability Score"},
+                label="Developable Zones"
+            )
+            
+        plt.title("Macquarie Precinct Data Center Suitability Analysis", fontsize=14, fontweight="bold")
+        plt.xlabel("Easting (m) - EPSG:7856", fontsize=10)
+        plt.ylabel("Northing (m) - EPSG:7856", fontsize=10)
+        plt.grid(True, which='both', color='#ecf0f1', linestyle='-', linewidth=0.5)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys(), loc="upper right")
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=60, bbox_inches='tight')
+        buf.seek(0)
+        img_str = base64.b64encode(buf.read()).decode('utf-8')
+        
+        print("===START_B64_IMAGE===")
+        chunk_size = 80
+        for i in range(0, len(img_str), chunk_size):
+            print(img_str[i:i+chunk_size])
+        print("===END_B64_IMAGE===")
+        print("[analysis] Analysis job finished successfully.")
+    finally:
+        print("[analysis] Stopping SedonaContext session...")
+        spark.stop()
 
 if __name__ == "__main__":
     main()

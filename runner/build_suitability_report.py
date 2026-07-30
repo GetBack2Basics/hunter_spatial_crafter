@@ -401,6 +401,59 @@ input:focus + .slider {
 input:checked + .slider:before {
   transform: translateX(26px);
 }
+
+/* Custom Range Input Sliders Styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  background: #1f2937;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  outline: none;
+  cursor: pointer;
+  margin: 0.5rem 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  background: #fbbf24;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+#power-weight-slider::-webkit-slider-thumb { background: #60a5fa; box-shadow: 0 0 8px rgba(96, 165, 250, 0.8); }
+#water-weight-slider::-webkit-slider-thumb { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.8); }
+#size-weight-slider::-webkit-slider-thumb { background: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.8); }
+#target-size-slider::-webkit-slider-thumb { background: #a78bfa; box-shadow: 0 0 8px rgba(167, 139, 250, 0.8); }
+
+#power-weight-slider::-moz-range-thumb { background: #60a5fa; box-shadow: 0 0 8px rgba(96, 165, 250, 0.8); }
+#water-weight-slider::-moz-range-thumb { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.8); }
+#size-weight-slider::-moz-range-thumb { background: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.8); }
+#target-size-slider::-moz-range-thumb { background: #a78bfa; box-shadow: 0 0 8px rgba(167, 139, 250, 0.8); }
 </style>
 </head>
 <body>
@@ -408,9 +461,9 @@ input:checked + .slider:before {
   <header>
     <div>
       <h1>National Siting Suitability Report</h1>
-      <div class="subtitle">Interactive 5-Tier Spatial Constraint Model & Benchmarking &mdash; Compiled: {{ COMPILED_TIME }}</div>
+      <div class="subtitle">Interactive 5-Tier Spatial Constraint Model & Benchmarking</div>
     </div>
-    <div class="metadata-pill">Wherobots Spark Engine</div>
+    <a href="https://cloud.wherobots.com" target="_blank" class="metadata-pill" style="text-decoration: none; color: #60a5fa;">Wherobots Spark Engine ↗</a>
   </header>
 
   <div class="stat-grid">
@@ -432,22 +485,54 @@ input:checked + .slider:before {
     </div>
   </div>
 
-  <!-- What-If Scenario Control Panel -->
+  <!-- What-If Multi-Criteria Simulation Sandbox -->
   <div class="card" style="margin-bottom: 1.5rem; border: 1px solid var(--accent-yellow); background: rgba(245, 158, 11, 0.03);">
-    <h2 style="color: var(--accent-yellow); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-      What-If Scenario Sandbox: Tailings Storage Facility (TSF) Dam Status
-    </h2>
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; font-size: 0.95rem; line-height: 1.5;">
-      <div style="max-width: 75%;">
-        <p style="margin: 0; color: var(--text-secondary);">By default, the <strong>Cockle Creek / Macquarie sub-precincts</strong> are constrained by the active TSF Dam safety declaration. De-declaring this dam hazard zone immediately unlocks <strong>15.2 additional hectares</strong> of flat, high-bearing net developable pad space for hyperscale construction, boosting suitability index scores.</p>
-      </div>
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+      <h2 style="color: var(--accent-yellow); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        Interactive What-If Multi-Criteria Simulation Sandbox
+      </h2>
+      <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05);">
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">TSF Dam Safety Status:</span>
         <label class="switch">
           <input type="checkbox" id="tsf-toggle">
           <span class="slider"></span>
         </label>
-        <span id="tsf-status-label" style="font-weight: bold; color: #ef4444;">DAM DECLARED (Excluded)</span>
+        <span id="tsf-status-label" style="font-weight: bold; color: #ef4444; font-size: 0.85rem;">DAM DECLARED (Excluded)</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; font-size: 0.875rem;">
+      <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+          <label for="power-weight-slider"><strong>Power Grid Weight:</strong></label>
+          <span id="power-weight-val" style="color: #60a5fa; font-weight: bold;">50%</span>
+        </div>
+        <input type="range" id="power-weight-slider" min="0" max="100" value="50" style="width: 100%; cursor: pointer;">
+      </div>
+
+      <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+          <label for="water-weight-slider"><strong>Recycled Water Weight:</strong></label>
+          <span id="water-weight-val" style="color: #34d399; font-weight: bold;">30%</span>
+        </div>
+        <input type="range" id="water-weight-slider" min="0" max="100" value="30" style="width: 100%; cursor: pointer;">
+      </div>
+
+      <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+          <label for="size-weight-slider"><strong>Parcel Size Weight:</strong></label>
+          <span id="size-weight-val" style="color: #fbbf24; font-weight: bold;">20%</span>
+        </div>
+        <input type="range" id="size-weight-slider" min="0" max="100" value="20" style="width: 100%; cursor: pointer;">
+      </div>
+
+      <div style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.05);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+          <label for="target-size-slider"><strong>Target Parcel Size (1.0 Score):</strong></label>
+          <span id="target-size-val" style="color: #a78bfa; font-weight: bold;">15 ha</span>
+        </div>
+        <input type="range" id="target-size-slider" min="3" max="30" value="15" step="1" style="width: 100%; cursor: pointer;">
       </div>
     </div>
   </div>
@@ -627,6 +712,10 @@ Else -> 1.0 - ((distance_m - 1000) / 9000.0)</pre>
       </ul>
     </div>
   </div>
+
+  <footer style="margin-top: 2.5rem; padding: 1.5rem 1rem; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+    &copy;&reg; 2026 GetBack2Basics.net - <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" style="color: #60a5fa; text-decoration: underline;">github project link</a> | All material is for information only and is the authors private opinions | {{ FOOTER_TIMESTAMP }} (yyyymmddhhmm)
+  </footer>
 </div>
 
 <script>
@@ -709,6 +798,11 @@ const localBiodiversity = L.geoJSON(biodiversityConstraintsGeoJSON, {
   style: { color: "#ef4444", weight: 0.5, fillColor: "#ef4444", fillOpacity: 0.15 }
 }).addTo(map);
 
+// Auto-zoom to Macquarie Coal Complex precinct at startup
+if (localPrecinctBoundary.getBounds().isValid()) {
+  map.fitBounds(localPrecinctBoundary.getBounds(), { padding: [20, 20] });
+}
+
 // Add Layer Control
 const baseLayers = {
   "OpenStreetMap": osm,
@@ -761,7 +855,7 @@ function updateAuditPanel(site) {
               <span class="audit-finger">${site.area_ha >= 15.0 ? '👍' : '👎'}</span>
             </div>
             <div class="audit-detail">
-              <strong>Proponent Claim:</strong> 100% of sub-precinct boundaries are buildable.
+              <strong>Proponent Claim:</strong> 100% of sub-precinct boundaries are buildable (<a href="https://www.lakemac.com.au" target="_blank" style="color: #60a5fa; text-decoration: underline;">Project Page / Paper ↗</a>).
             </div>
             <div class="audit-detail">
               <strong>Spatial Ground-Truth:</strong> Subtracting Riparian (30m), Pipeline (20m), Slope (>12%), and TSF Dam break risks yields <strong>${site.area_ha.toFixed(1)} ha</strong> developable pad space.
@@ -980,47 +1074,88 @@ function renderDashboard() {
 // Initial render
 renderDashboard();
 
-// What-If TSF Toggle Handler
-document.getElementById('tsf-toggle').addEventListener('change', function(e) {
-  const isDeDeclared = e.target.checked;
+// Interactive Simulation Sandbox Handler
+function recalculateSimulation() {
+  const isDeDeclared = document.getElementById('tsf-toggle').checked;
   const statusLabel = document.getElementById('tsf-status-label');
   
   if (isDeDeclared) {
     statusLabel.textContent = "TSF DE-DECLARED (Unlocked)";
     statusLabel.style.color = "#10b981";
-    
-    // Change style of local net developable layer to show expanded space
     localNetDevelopable.setStyle({ color: "#10b981", fillColor: "#10b981", fillOpacity: 0.45 });
-    
-    // Update candidate properties
-    candidatesData.forEach(c => {
-      c.area_ha = c.area_ha_dedeclared;
-      c.suitability_score = c.suitability_score_dedeclared;
-      c.size_score = c.size_score_dedeclared;
-    });
   } else {
     statusLabel.textContent = "DAM DECLARED (Excluded)";
     statusLabel.style.color = "#ef4444";
-    
-    // Restore style
     localNetDevelopable.setStyle({ color: "#10b981", fillColor: "#10b981", fillOpacity: 0.25 });
-    
-    // Restore properties
-    candidatesData.forEach(c => {
-      c.area_ha = c.area_ha_declared;
-      c.suitability_score = c.suitability_score_declared;
-      c.size_score = c.size_score_declared;
-    });
   }
-  
+
+  // Read weight and threshold sliders
+  const rawPw = parseFloat(document.getElementById('power-weight-slider').value) || 0;
+  const rawWw = parseFloat(document.getElementById('water-weight-slider').value) || 0;
+  const rawSw = parseFloat(document.getElementById('size-weight-slider').value) || 0;
+  const targetSize = parseFloat(document.getElementById('target-size-slider').value) || 15.0;
+
+  // Update UI slider value displays
+  document.getElementById('power-weight-val').textContent = `${Math.round(rawPw)}%`;
+  document.getElementById('water-weight-val').textContent = `${Math.round(rawWw)}%`;
+  document.getElementById('size-weight-val').textContent = `${Math.round(rawSw)}%`;
+  document.getElementById('target-size-val').textContent = `${targetSize} ha`;
+
+  // Normalize weights dynamically
+  const totalWeight = (rawPw + rawWw + rawSw) || 1.0;
+  const normPw = rawPw / totalWeight;
+  const normWw = rawWw / totalWeight;
+  const normSw = rawSw / totalWeight;
+
+  function calcDynamicSizeScore(area) {
+    if (area === null || area === undefined || isNaN(area)) return 0.0;
+    if (area >= targetSize) return 1.0;
+    if (area < 3.0) return 0.1;
+    return 0.1 + (0.9 * (area - 3.0) / (targetSize - 3.0));
+  }
+
+  candidatesData.forEach(c => {
+    // Dynamic score recalculations across scenarios
+    const sizeScoreRaw = calcDynamicSizeScore(c.area_ha_raw);
+    c.suitability_score_raw = (c.power_score * normPw) + (c.water_score * normWw) + (sizeScoreRaw * normSw);
+
+    if (c.area_ha_declared !== null && c.area_ha_declared !== undefined) {
+      c.size_score_declared = calcDynamicSizeScore(c.area_ha_declared);
+      c.suitability_score_declared = (c.power_score * normPw) + (c.water_score * normWw) + (c.size_score_declared * normSw);
+    }
+    if (c.area_ha_dedeclared !== null && c.area_ha_dedeclared !== undefined) {
+      c.size_score_dedeclared = calcDynamicSizeScore(c.area_ha_dedeclared);
+      c.suitability_score_dedeclared = (c.power_score * normPw) + (c.water_score * normWw) + (c.size_score_dedeclared * normSw);
+    }
+
+    if (isDeDeclared) {
+      c.area_ha = c.area_ha_dedeclared !== null ? c.area_ha_dedeclared : c.area_ha_raw;
+      c.suitability_score = c.suitability_score_dedeclared !== null ? c.suitability_score_dedeclared : c.suitability_score_raw;
+      c.size_score = c.size_score_dedeclared !== null ? c.size_score_dedeclared : sizeScoreRaw;
+    } else {
+      c.area_ha = c.area_ha_declared !== null ? c.area_ha_declared : c.area_ha_raw;
+      c.suitability_score = c.suitability_score_declared !== null ? c.suitability_score_declared : c.suitability_score_raw;
+      c.size_score = c.size_score_declared !== null ? c.size_score_declared : sizeScoreRaw;
+    }
+  });
+
   renderDashboard();
-  
+
   // Re-audit currently selected panel if visible
   const selectedSiteTitle = document.getElementById('audit-site-title').textContent;
   if (selectedSiteTitle) {
     const cleanTitle = selectedSiteTitle.split(' (')[0];
     const match = candidatesData.find(c => c.town_name === cleanTitle);
     if (match) updateAuditPanel(match);
+  }
+}
+
+// Bind events to sliders and toggle
+['tsf-toggle', 'power-weight-slider', 'water-weight-slider', 'size-weight-slider', 'target-size-slider'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('input', recalculateSimulation);
+    el.addEventListener('change', recalculateSimulation);
   }
 });
 
@@ -1723,6 +1858,7 @@ def main():
         print("[8/8] Generating HTML content and writing interactive dashboard...")
         import datetime
         compiled_time = datetime.datetime.now().astimezone().strftime("%d %B %Y, %I:%M:%S %p %Z")
+        footer_timestamp = datetime.datetime.now().astimezone().strftime("%Y%m%d%H%M")
         elapsed_seconds = time.time() - start_time
         total_geom = total_local + total_state
         if total_geom >= 1e6:
@@ -1735,6 +1871,7 @@ def main():
 
         html_content = HTML_TEMPLATE
         html_content = html_content.replace("{{ COMPILED_TIME }}", compiled_time)
+        html_content = html_content.replace("{{ FOOTER_TIMESTAMP }}", footer_timestamp)
         html_content = html_content.replace("{{ GEOMETRIES_COUNT_VAL }}", geom_str)
         html_content = html_content.replace("{{ GEOMETRIES_COUNT_TIME }}", elapsed_str)
         html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))

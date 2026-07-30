@@ -679,23 +679,28 @@ def main():
     storage_root = _cfg().get("storage_root", "wherobots://fgsdb/macquarie")
     print(f"[macquarie] Storage root: {storage_root}")
     sedona = _sedona()
-    sedona.sql("CREATE DATABASE IF NOT EXISTS org_catalog.fgsdb")
+    try:
+        sedona.sql("CREATE DATABASE IF NOT EXISTS org_catalog.fgsdb")
 
-    bboxes = load_precinct_boundary(sedona, storage_root)
-    bbox_100km = bboxes["bbox_100km"]
-    bbox_study = bboxes["bbox_study"]
+        bboxes = load_precinct_boundary(sedona, storage_root)
+        bbox_100km = bboxes["bbox_100km"]
+        bbox_study = bboxes["bbox_study"]
 
-    load_water_infrastructure(sedona, storage_root, _cfg(), bbox=bbox_100km)
-    load_biodiversity_constraints(sedona, storage_root, _cfg(), bbox=bbox_100km)
-    load_energy_infrastructure(sedona, storage_root, _cfg(), bbox=bbox_100km)
-    load_pipeline_corridors(sedona, storage_root, _cfg(), bbox=bbox_100km)
-    load_transport_networks(sedona, storage_root, _cfg(), bbox=bbox_100km)
-    load_abs_meshblocks(sedona, storage_root, _cfg(), bbox=bbox_study)
-    load_hazard_constraints(sedona, storage_root, _cfg(), bbox=bbox_100km)
-    build_net_developable_zones(sedona, storage_root, _cfg())
-    run_verification(sedona)
-    print("\n[macquarie] Macquarie ETL complete.")
+        load_water_infrastructure(sedona, storage_root, _cfg(), bbox=bbox_100km)
+        load_biodiversity_constraints(sedona, storage_root, _cfg(), bbox=bbox_100km)
+        load_energy_infrastructure(sedona, storage_root, _cfg(), bbox=bbox_100km)
+        load_pipeline_corridors(sedona, storage_root, _cfg(), bbox=bbox_100km)
+        load_transport_networks(sedona, storage_root, _cfg(), bbox=bbox_100km)
+        load_abs_meshblocks(sedona, storage_root, _cfg(), bbox=bbox_study)
+        load_hazard_constraints(sedona, storage_root, _cfg(), bbox=bbox_100km)
+        build_net_developable_zones(sedona, storage_root, _cfg())
+        run_verification(sedona)
+        print("\n[macquarie] Macquarie ETL complete.")
+    finally:
+        print("[macquarie] Stopping SedonaContext session...")
+        sedona.stop()
 
 
 if __name__ == "__main__":
     main()
+
