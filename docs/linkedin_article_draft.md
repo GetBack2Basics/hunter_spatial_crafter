@@ -1,16 +1,10 @@
-# LinkedIn Technical Article Draft
-
-**Title:** Building a Cloud-Native Regional Spatial Siting Engine with Apache Sedona & Wherobots Cloud  
-**Author:** Corey (GetBack2Basics / Hunter Spatial Crafter)  
-**Target Audience:** GIS Engineers, Spatial Data Engineers, Cloud Architects, Urban Planners, Data Center Developers  
-
----
-
 ## 🚀 Building a Cloud-Native Regional Spatial Siting Engine with Apache Sedona & Wherobots Cloud
 
 Energy transition and digital infrastructure demand rapid, data-driven spatial siting. Whether evaluating former industrial precincts for hyperscale data centers, renewable microgrids, or clean technology hubs, traditional desktop GIS desktop workflows struggle when merging multi-layer environmental, infrastructure, and cadastral constraints at scale.
 
-In our open benchmark project—**Hunter Spatial Crafter**—we set out to answer a key question:  
+This is just a private (Get Back to Basics) project to learn the tech where spatial is headed and all opinions expressed and data used is public information.
+
+In my open benchmark project—**Hunter Spatial Crafter**—I set out to answer a key question:  
 *How quickly and cost-effectively can we build an end-to-end, automated spatial siting engine for regional NSW (Macquarie Coal Complex Transformation Precinct) using cloud-native spatial technologies?*
 
 Here is how we built it using **Wherobots Cloud**, **Apache Sedona**, **Havasu (Iceberg)**, and **GeoPandas**, along with key spatial engineering insights and cost-optimization learnings.
@@ -70,7 +64,7 @@ WITH combined_constraints AS (
   )
 )
 -- Subtract constraints from precinct boundary to yield buildable zones
-SELECT 
+SELECT
   p.precinct_key,
   ST_Difference(p.geometry, c.constraint_geom) AS net_developable_geom,
   ST_Area(ST_Difference(p.geometry, c.constraint_geom)) / 10000.0 AS developable_area_ha
@@ -98,7 +92,7 @@ By combining **Apache Sedona** and **Wherobots Cloud**, we reduced precinct site
 
 ---
 
-📌 *Project Repository:* [`GetBack2Basics / hunter_spatial_crafter`](file:///c:/Projects/hunter_spatial_crafter)  
+📌 *Project Repository:Download and then open [* [`GetBack2Basics / hunter_spatial_crafter`](file:///c:/Projects/hunter_spatial_crafter)  ](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)
 💬 *What tools are you using for large-scale spatial ETL and infrastructure siting? Let's connect in the comments!*  
 
 #GIS #SpatialData #ApacheSedona #Wherobots #DataEngineering #Geospatial #DataCenter #EnergyTransition #Python #SpatialSQL
