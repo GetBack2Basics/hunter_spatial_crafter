@@ -95,7 +95,7 @@ We expanded the **Hunter Spatial Crafter** repository into an end-to-end automat
 ```
 
 #### Introducing the "Map in a Box" Report:
-Our python builder compiles the full cloud analytics run into a zero-dependency, self-contained **"Map in a Box"** HTML report ([`national_suitability_report.html`](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)) that can be shared, emailed, or hosted anywhere. Download and open the file in your browser to view the interactive map and dashboard!
+Our python builder compiles the full cloud analytics run into a zero-dependency, self-contained **"Map in a Box"** HTML report ([`national_suitability_report.html`](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)) that can be shared, emailed, or hosted anywhere. Download and open the file in your browser to view the interactive map and dashboard! This was an enhancement to my project https://github.com/GetBack2Basics/Spatial_Report_Crafter
 
 Key interactive capabilities embedded directly in the report:
 * 🗺️ **Vector Map & Spatial Overlays**: Embedded Leaflet maps featuring real-time GeoJSON layers of local precinct boundaries and net developable pads.
