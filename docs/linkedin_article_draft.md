@@ -102,7 +102,7 @@ Key interactive capabilities embedded directly in the report:
 * 🎛️ **What-If Scenario Sandbox**: A live TSF Tailings Dam status toggle—de-declaring the dam hazard dynamically updates buildable pad areas and suitability scores in real-time across the UI.
 * ⚡ **Physics & Engineering Models**: Integrates thermodynamic pipe heat loss ($T_{delivery}$ over distance), natural thermal discharge cooling travel distance, and micro-pumped hydro potential (MWh energy capacity & MPa head pressure).
 * 📈 **National & Regional Scorecard Leaderboard**: Ranks national transition candidates (Latrobe VIC, Collie WA, Gladstone QLD) against local Hunter precinct sub-sites.
-
+*  ** Public and open - there are tabs showing the data used and queries run for audit and review.
 ---
 
 ### 🛠️ 4. Spatial SQL Snippet: Generating Net Developable Zones
