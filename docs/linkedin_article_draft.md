@@ -10,7 +10,7 @@
 
 Energy transition and digital infrastructure demand rapid, data-driven spatial siting. Whether evaluating former industrial precincts for hyperscale data centers, renewable microgrids, or clean technology hubs, traditional desktop GIS workflows struggle when merging multi-layer environmental, infrastructure, and cadastral constraints at scale.
 
-*This is a private (Get Back to Basics) project to learn where spatial technology is headed. All opinions expressed and data used are public information.*
+*This is a private (Get Back to Basics) project to learn where spatial technology is headed. All opinions expressed and data used are public information.* BTW we is the royal "we" and means me!
 
 In our open benchmark project—**Hunter Spatial Crafter**—we set out to answer a key question:  
 *How quickly and cost-effectively can we build an end-to-end, automated spatial siting engine that funnels from **National & Regional market benchmarking** down to **Local Precinct micro-siting** using cloud-native spatial technologies?*
