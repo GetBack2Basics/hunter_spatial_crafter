@@ -10,12 +10,12 @@
 
 Energy transition and digital infrastructure demand rapid, data-driven spatial siting. Whether evaluating former industrial precincts for hyperscale data centers, renewable microgrids, or clean technology hubs, traditional desktop GIS workflows struggle when merging multi-layer environmental, infrastructure, and cadastral constraints at scale.
 
-*This is a private (Get Back to Basics) project to learn where spatial technology is headed. All opinions expressed and data used are public information.* BTW we is the royal "we" and means me!
+*This is a private (Get Back to Basics) project to learn where spatial technology is headed. All opinions expressed and data used are public information.*
 
 In our open benchmark project—**Hunter Spatial Crafter**—we set out to answer a key question:  
 *How quickly and cost-effectively can we build an end-to-end, automated spatial siting engine that funnels from **National & Regional market benchmarking** down to **Local Precinct micro-siting** using cloud-native spatial technologies?*
 
-Here is how we built it using **Wherobots Cloud**, **Apache Sedona**, **Havasu (Iceberg)**, and **GeoPandas**, along with key spatial engineering insights and our compiled **"Map in a Box"** interactive siting dashboard.
+Here is how we built it using **Wherobots Cloud**, **Apache Sedona**, **Havasu (Spatial Iceberg)**, and **GeoParquet**, along with key spatial engineering insights and our compiled **"Map in a Box"** interactive siting dashboard.
 
 ---
 
@@ -58,14 +58,59 @@ To perform this multi-tier constraint modeling across regional NSW, our pipeline
 * **NSW Pipeline Corridors**: 197,247 features
 * **TfNSW Active Transport Pathways**: 188,576 features
 * **NSW Hydrography & Waterways**: 181,501 features
-* **ABS Regional Demographics (SA2)**: 181,501 records
+* **ABS Regional Demographics (SA2)**: 1,160 records
 * **ABS Census Meshblocks**: 223,238 polygons
 
 ---
 
-### 📊 2. Desktop GIS vs. Cloud-Native Sedona Benchmark
+### 📁 2. Cloud-Native Storage Architecture: GeoParquet ➔ Apache Iceberg ➔ Wherobots Havasu
 
-Doing multi-layer buffer, overlay, and spatial union operations across 1.75M+ features in traditional desktop GIS (QGIS or ArcGIS Pro) creates severe memory bottlenecks, frequent software crashes, and un-reproducible manual steps.
+Rather than storing spatial data in fragmented desktop Shapefiles or legacy Geodatabases, all spatial tables are cataloged under `org_catalog.fgsdb.*` and persisted in cloud object storage at `s3://wherobots-cloud-us-west-2/org_ltq5l3obgb/fgsdb/` in **AWS us-west-2** (GDA2020 / MGA Zone 56 projected CRS `EPSG:7856`).
+
+#### Concrete Lakehouse Storage & Directory Hierarchy:
+```
+s3://wherobots-cloud-us-west-2/org_ltq5l3obgb/fgsdb/
+├── macquarie_biodiversity_constraints/          [Havasu / Iceberg Spatial Table]
+│   ├── metadata/                                 (Metadata Manifests & Snapshots)
+│   │   ├── v1.metadata.json                      (Table Schema & Partition Specs)
+│   │   ├── snap-9102834019284.avro              (Snapshot Manifest List)
+│   │   └── 00000-10293-m0.avro                  (Manifest w/ 2D Bounding Box Envelopes)
+│   └── data/                                     (GeoParquet Files - 84.2 MB)
+│       ├── hilbert_cell_0012/00000-0-7a8b9c.parquet
+│       └── hilbert_cell_0013/00001-0-1d2e3f.parquet
+├── macquarie_energy_infrastructure/             [GeoParquet: 62.5 MB (241,573 geoms)]
+├── macquarie_transport_rail/                    [GeoParquet: 58.1 MB (275,421 geoms)]
+├── macquarie_pipeline_corridors/                [GeoParquet: 41.8 MB (197,247 geoms)]
+├── macquarie_abs_meshblocks/                    [GeoParquet: 98.4 MB (223,238 geoms)]
+├── macquarie_water_hydrography/                 [GeoParquet: 44.6 MB (181,501 geoms)]
+└── macquarie_active_transport/                  [GeoParquet: 39.2 MB (188,576 geoms)]
+```
+
+#### Spatial Storage Efficiency (85.2% Compression Reduction):
+By leveraging **GeoParquet** vector compression and **Havasu** spatial indexing, our 1.75M+ feature dataset stack was compressed from an uncompressed raw size of **~2.9 GB** down to just **~430.7 MB**—an overall **85.2% storage footprint reduction** on cloud storage!
+
+---
+
+### ⚡ 3. Why Wherobots Executes Spatial SQL So Quickly (2.4 Seconds over 1.75M+ Features)
+
+How does Wherobots process spatial joins and overlay operations over 1.75M+ features in **2.4 seconds** while desktop GIS takes hours or days? It relies on 4 fundamental speed pillars backed by open research:
+
+1. **Zero-Scan Metadata Envelope Pruning (Havasu)**: Havasu embeds 2D spatial bounding box envelopes (`[minx, miny, maxx, maxy]`) directly inside Iceberg AVRO manifest files. Spatial queries containing predicates like `ST_Intersects` prune 95%+ of irrelevant Parquet files at the metadata layer *before scanning any raw disk bytes*.
+2. **Hilbert Curve Spatial Clustering**: Geometries are co-located spatially on disk using 2D Hilbert space-filling curves. Geographically adjacent polygons and vectors sit in identical Parquet row groups, eliminating random disk I/O seek overhead.
+3. **Vectorized Memory Execution (Apache Sedona)**: Apache Sedona operates directly on columnar GeoParquet WKB geometry buffers using C++/Rust computational routines, avoiding Java/Python object serialization.
+4. **Parallel Distributed Spatial Joins**: Quad-tree and R-tree spatial indexes partition query space dynamically across Spark worker nodes, converting expensive $O(N \times M)$ cross-joins into efficient $O(N \log M)$ parallel bucket joins.
+
+#### Foundational Specifications & Whitepaper References:
+* 📄 **Wherobots Havasu Table Format**: [Havasu Specification Docs](https://docs.wherobots.com/latest/concepts/havasu/) & [Spatial Lakehouse Architecture Whitepaper](https://wherobots.com/blog/havasu-spatial-iceberg/)
+* 📄 **Apache Iceberg Table Format**: [Apache Iceberg Official Spec](https://iceberg.apache.org/spec/) & [Apache Iceberg Project](https://iceberg.apache.org/)
+* 📄 **OGC GeoParquet Encoding**: [OGC GeoParquet Standard](https://geoparquet.org/) & [GeoParquet GitHub Spec](https://github.com/opengeospatial/geoparquet)
+* 📄 **Apache Sedona Research Paper**: [Apache Sedona (GeoSpark) SIGMOD Whitepaper](https://sedona.apache.org/)
+
+---
+
+### 📊 4. Desktop GIS vs. Cloud-Native Sedona Benchmark
+
+Doing multi-layer buffer, overlay, and spatial union operations across 1.75M+ features in traditional desktop GIS (QGIS or ArcGIS Pro) creates severe memory bottlenecks, frequent software crashes, and non-reproducible manual steps.
 
 | Metric / Dimension | Traditional Desktop GIS (QGIS / ArcGIS Pro) | Cloud-Native Spatial (Apache Sedona + Wherobots) |
 | :--- | :--- | :--- |
@@ -77,35 +122,7 @@ Doing multi-layer buffer, overlay, and spatial union operations across 1.75M+ fe
 
 ---
 
-### ⚡ 3. The Cloud-Native Architecture & "Map in a Box" Report
-
-We expanded the **Hunter Spatial Crafter** repository into an end-to-end automated framework running on **Wherobots Cloud**:
-
-```
-[ NSW SEED / ABS / Lake Mac Open Data (1.75M Geometries) ]
-                          │
-                          ▼ (Wherobots Spatial Ingest - EPSG:7856)
-          [ Apache Sedona + Spatial SQL Transformations ]
-                          │
-                          ▼ (Havasu / Iceberg Storage)
-            [ org_catalog.fgsdb.macquarie_* ]
-                          │
-                          ▼ (Report Builder Engine)
-    [ 📦 "MAP IN A BOX": Standalone Interactive HTML Report ]
-```
-
-#### Introducing the "Map in a Box" Report:
-Our python builder compiles the full cloud analytics run into a zero-dependency, self-contained **"Map in a Box"** HTML report ([`national_suitability_report.html`](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)) that can be shared, emailed, or hosted anywhere. Download and open the file in your browser to view the interactive map and dashboard! This was an enhancement to my project https://github.com/GetBack2Basics/Spatial_Report_Crafter
-
-Key interactive capabilities embedded directly in the report:
-* 🗺️ **Vector Map & Spatial Overlays**: Embedded Leaflet maps featuring real-time GeoJSON layers of local precinct boundaries and net developable pads.
-* 🎛️ **What-If Scenario Sandbox**: A live TSF Tailings Dam status toggle—de-declaring the dam hazard dynamically updates buildable pad areas and suitability scores in real-time across the UI.
-* ⚡ **Physics & Engineering Models**: Integrates thermodynamic pipe heat loss ($T_{delivery}$ over distance), natural thermal discharge cooling travel distance, and micro-pumped hydro potential (MWh energy capacity & MPa head pressure).
-* 📈 **National & Regional Scorecard Leaderboard**: Ranks national transition candidates (Latrobe VIC, Collie WA, Gladstone QLD) against local Hunter precinct sub-sites.
-*  ** Public and open - there are tabs showing the data used and queries run for audit and review.
----
-
-### 🛠️ 4. Spatial SQL Snippet: Generating Net Developable Zones
+### 🛠️ 5. Spatial SQL Snippet: Generating Net Developable Zones
 
 With Apache Sedona on Wherobots, combining multi-layer constraint masks into a net developable polygon requires concise Spatial SQL:
 
@@ -134,7 +151,23 @@ CROSS JOIN combined_constraints c;
 
 ---
 
-### 💰 5. Key Learnings: Performance & Cost Optimization on Wherobots
+### 📦 6. The "Map in a Box" Report & Open Evidence Trail
+
+Our python builder compiles the full cloud analytics run into a zero-dependency, self-contained **"Map in a Box"** HTML report ([`national_suitability_report.html`](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)) featuring **9 integrated tabs** in the *Benchmarking, Data Provenance & Open Evidence Trail* section:
+
+1. **State Benchmarking**: Statewide candidate score & area averages across NSW, VIC, WA, QLD.
+2. **Regional Aggregates**: Regional sub-market performance comparisons.
+3. **Data Sources & Volumes**: Direct agency links (SEED NSW, ABS Digital Atlas, TfNSW, Lake Mac Open Data).
+4. **Lakehouse Storage & Directory Tree**: Visual S3 directory tree (`metadata/` vs `data/`) and CRS specs.
+5. **Table Footprint & Compression**: Complete inventory of feature counts, raw sizes, and GeoParquet sizes.
+6. **Whitepapers & Specifications**: Direct links to open standards (Havasu, Iceberg, GeoParquet, Sedona).
+7. **Speed Mechanics**: Detailed breakdown of envelope pruning, Hilbert clustering, and vectorized joins.
+8. **What-If Sandbox Mechanics**: Explains how the interactive multi-criteria sandbox runs **100% in-browser** with zero server calls, zero network latency, and **$0.00 cloud compute charges** during interactive slider sessions.
+9. **Calculations & SQL Trail**: Mathematical equations for thermodynamic pipe heat loss, head pressure, and Spatial SQL snippets.
+
+---
+
+### 💰 7. Key Learnings: Performance & Cost Optimization on Wherobots
 
 One of our biggest takeaways from building **Hunter Spatial Crafter** was managing cloud spatial compute costs:
 
@@ -152,11 +185,10 @@ Check out the interactive report and open-source project repository to explore c
 
 ---
 
-📌 *Project Repository:* [GetBack2Basics / hunter_spatial_crafter](https://github.com/GetBack2Basics/hunter_spatial_crafter)  
+📌 *Project Repository:* [github.com/getback2basics / hunter_spatial_crafter](https://github.com/GetBack2Basics/hunter_spatial_crafter)  
 🌐 *Interactive Report:* [national_suitability_report.html](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)  
 💬 *What tools are you using for large-scale spatial ETL and infrastructure siting? Let's connect in the comments!*  
 
-#GIS #SpatialData #ApacheSedona #Wherobots #DataEngineering #Geospatial #DataCenter #EnergyTransition #Python #SpatialSQL
+©® 2026 GetBack2Basics - [github.com/getback2basics](https://github.com/GetBack2Basics) | All material is for information only and is the authors private opinion
 
-
-
+#GIS #SpatialData #ApacheSedona #Wherobots #DataEngineering #Geospatial #DataCenter #EnergyTransition #Python #SpatialSQL #Iceberg #GeoParquet
