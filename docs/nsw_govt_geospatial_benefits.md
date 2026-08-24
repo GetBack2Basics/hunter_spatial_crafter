@@ -3,6 +3,7 @@
 **Target Audience:** Senior Geospatial Leadership & Engineers (NSW Spatial Services, Department of Planning, Housing and Infrastructure – DPHI, Environment, and Land Administration)  
 **Reference Portal:** [NSW Spatial Services](https://www.spatial.nsw.gov.au/)  
 **Document Purpose:** Quick strategic pointers on how the `hunter_spatial_crafter` architecture and spatial ETL capabilities deliver tangible benefits to NSW Government land, planning, and environmental operations.
+
 **Larger Vision:** I am using this single project to demonstrate the possible value of adopting the wherobots/sedona engine and workflow. The greater gains are in the ECM/SLATS monitoring programs (based on my work in those teams) and the Bushfire analysis that's done on the RSLS HPC cluster.
 
 ---
