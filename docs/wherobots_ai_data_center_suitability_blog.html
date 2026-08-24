@@ -90,12 +90,12 @@
         <h2>Report overview</h2>
         <div class="grid">
           <figure>
-            <div class="figure-img"><img src="images/figure1.png" alt="Screenshot of the national data center siting suitability report overview showing the map, summary cards, and leaderboard." /></div>
-            <figcaption><strong>Figure 1.</strong> The report combines a map, summary metrics, and a ranked candidate list into one reviewable spatial document.</figcaption>
+            <div class="figure-img"><img src="images/figure1.png" alt="Screenshot of the National Data Center Siting Suitability Report dashboard showing total candidates, top candidate score, the interactive multi-criteria sandbox, siting map, and national leaderboard." /></div>
+            <figcaption><strong>Figure 1.</strong> The report overview combines summary KPI cards, an interactive What-If simulation sandbox, an interactive siting map with layer controls, and a ranked candidate leaderboard into a single reviewable spatial document.</figcaption>
           </figure>
           <figure>
-            <div class="figure-img"><img src="images/figure2.png" alt="Screenshot of the report's interactive map controls and layer toggles." /></div>
-            <figcaption><strong>Figure 2.</strong> The map supports searchable layers, configurable basemaps, and optional WMS/WFS services.</figcaption>
+            <div class="figure-img"><img src="images/figure2.png" alt="Screenshot of the Siting Map and Proponent Claim Audit section detailing net developable pad area, thermodynamic decay, network topology routing, and micro-pumped hydro potential." /></div>
+            <figcaption><strong>Figure 2.</strong> Spatial ground-truth audit of candidate sites, verifying net developable pad space, network topology routing, thermodynamic cooling viability, and micro-pumped hydro storage potential against proponent claims.</figcaption>
           </figure>
         </div>
       </section>
@@ -104,12 +104,12 @@
         <h2>How the workflow works</h2>
         <p>The pipeline is straightforward:</p>
         <ol>
-          <li>gather spatial source layers</li>
-          <li>apply exclusions and constraints</li>
-          <li>compute distances to infrastructure</li>
-          <li>score each candidate using weighted criteria</li>
-          <li>benchmark candidates against regional baselines</li>
-          <li>publish the result as an interactive HTML report</li>
+          <li>Gather spatial source layers</li>
+          <li>Apply exclusions and constraints</li>
+          <li>Compute distances to infrastructure</li>
+          <li>Score each candidate using weighted criteria</li>
+          <li>Benchmark candidates against regional baselines</li>
+          <li>Publish the result as an interactive HTML report</li>
         </ol>
         <p>The scoring model uses three main weights:</p>
         <ul><li><strong>Power grid proximity: 50%</strong></li><li><strong>Recycled water proximity: 30%</strong></li><li><strong>Parcel size: 20%</strong></li></ul>
@@ -168,10 +168,10 @@
       </section>
 
       <section>
-        <h2>Example candidate comparison</h2>
+        <h2>Benchmarking and speed mechanics</h2>
         <figure>
-          <div class="figure-img"><img src="images/figure3.png" alt="Screenshot of the candidate leaderboard and ranking comparison table showing the top candidate and ranked sites." /></div>
-          <figcaption><strong>Figure 3.</strong> The candidate leaderboard shows how ranking assumptions change the order of preferred sites, making tradeoffs visible.</figcaption>
+          <div class="figure-img"><img src="images/figure3.png" alt="Screenshot of the Benchmarking and Speed Mechanics tab highlighting Wherobots performance optimizations across 1.75M+ geometries." /></div>
+          <figcaption><strong>Figure 3.</strong> Benchmarking and speed mechanics breakdown detailing how Wherobots executes spatial SQL queries in seconds using metadata envelope pruning, Hilbert curve clustering, vectorized memory execution, and parallel distributed spatial joins.</figcaption>
         </figure>
       </section>
 
@@ -183,7 +183,11 @@
 
       <section>
         <h2>Repository links</h2>
-        <div class="repo-links"><a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">Wherobots spatial SQL and geospatial notebook workflows</a><a href="https://github.com/GetBack2Basics/Spatial_Report_Crafter" target="_blank" rel="noreferrer">Map-in-a-Box Spatial Document Crafter</a></div>
+        <div class="repo-links">
+          <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">Wherobots spatial SQL and geospatial notebook workflows</a>
+          <a href="https://github.com/GetBack2Basics/Spatial_Report_Crafter" target="_blank" rel="noreferrer">Map-in-a-Box Spatial Document Crafter</a>
+          <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html" target="_blank" rel="noreferrer">Interactive National Data Center Siting Suitability Report (runner/national_suitability_report.html)</a>
+        </div>
       </section>
     </main>
   </div>
