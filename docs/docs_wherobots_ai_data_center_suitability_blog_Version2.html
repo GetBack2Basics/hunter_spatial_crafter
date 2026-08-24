@@ -17,315 +17,84 @@
       --border: rgba(148, 163, 184, 0.18);
       --code: #0f172a;
     }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: radial-gradient(circle at top, #111b33 0%, var(--bg) 50%);
-      color: var(--text);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.65;
-    }
-
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2.5rem 1.25rem 4rem;
-    }
-
-    header {
-      margin-bottom: 2rem;
-      padding-bottom: 1.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    h1 {
-      margin: 0 0 0.5rem;
-      font-size: clamp(2rem, 4vw, 3.2rem);
-      line-height: 1.12;
-      background: linear-gradient(135deg, #93c5fd, #34d399);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 1.05rem;
-      max-width: 900px;
-    }
-
-    .meta {
-      margin-top: 0.85rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    .pill {
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.03);
-      border-radius: 999px;
-      padding: 0.35rem 0.75rem;
-    }
-
-    main > section {
-      margin-top: 2rem;
-      padding: 1.4rem 1.4rem 1.2rem;
-      background: rgba(17, 24, 43, 0.72);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      backdrop-filter: blur(8px);
-    }
-
-    h2 {
-      margin: 0 0 0.75rem;
-      color: #cfe3ff;
-      font-size: 1.4rem;
-    }
-
-    h3 {
-      margin: 1.2rem 0 0.55rem;
-      color: #d8e8ff;
-      font-size: 1.05rem;
-    }
-
-    p {
-      margin: 0.75rem 0;
-      color: #d9e3f7;
-    }
-
-    .lead {
-      font-size: 1.08rem;
-    }
-
-    .callout {
-      border-left: 4px solid var(--accent);
-      background: rgba(96, 165, 250, 0.08);
-      padding: 1rem 1rem 1rem 1rem;
-      margin: 1rem 0;
-      border-radius: 0.6rem;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-    }
-
-    @media (max-width: 800px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    figure {
-      margin: 0;
-      padding: 0.9rem;
-      background: rgba(255,255,255,0.025);
-      border: 1px solid var(--border);
-      border-radius: 0.9rem;
-    }
-
-    .figure-img {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 0.7rem;
-      background: linear-gradient(135deg, rgba(96,165,250,0.16), rgba(52,211,153,0.12));
-      border: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--muted);
-      font-size: 0.95rem;
-      text-align: center;
-      padding: 1rem;
-      box-sizing: border-box;
-    }
-
-    figcaption {
-      margin-top: 0.65rem;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.75rem;
-      overflow: hidden;
-      border-radius: 0.75rem;
-    }
-
-    th, td {
-      padding: 0.78rem 0.8rem;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      text-align: left;
-      vertical-align: top;
-    }
-
-    th {
-      color: #c8d8f0;
-      background: rgba(255,255,255,0.04);
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    td {
-      color: #e3ebf8;
-      font-size: 0.95rem;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .note {
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
-    ul {
-      margin: 0.5rem 0 0.75rem 1.2rem;
-      color: #d9e3f7;
-    }
-
-    li {
-      margin: 0.3rem 0;
-    }
-
-    .two-col {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 1rem;
-    }
-
-    @media (max-width: 900px) {
-      .two-col {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    code, pre {
-      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    pre {
-      margin: 0.75rem 0 0;
-      background: var(--code);
-      padding: 1rem;
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      overflow-x: auto;
-      color: #d9e3f7;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-
-    a {
-      color: #93c5fd;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .repo-links {
-      display: grid;
-      gap: 0.6rem;
-      margin-top: 0.75rem;
-    }
-
-    .repo-links a {
-      display: inline-block;
-    }
+    html, body { margin: 0; padding: 0; background: radial-gradient(circle at top, #111b33 0%, var(--bg) 50%); color: var(--text); font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    header { margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+    h1 { margin: 0 0 0.5rem; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.12; background: linear-gradient(135deg, #93c5fd, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: var(--muted); font-size: 1.05rem; max-width: 900px; }
+    .meta { margin-top: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.6rem; color: var(--muted); font-size: 0.92rem; }
+    .pill { border: 1px solid var(--border); background: rgba(255,255,255,0.03); border-radius: 999px; padding: 0.35rem 0.75rem; }
+    main > section { margin-top: 2rem; padding: 1.4rem 1.4rem 1.2rem; background: rgba(17, 24, 43, 0.72); border: 1px solid var(--border); border-radius: 1rem; backdrop-filter: blur(8px); }
+    h2 { margin: 0 0 0.75rem; color: #cfe3ff; font-size: 1.4rem; }
+    h3 { margin: 1.2rem 0 0.55rem; color: #d8e8ff; font-size: 1.05rem; }
+    p { margin: 0.75rem 0; color: #d9e3f7; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+    figure { margin: 0; padding: 0.9rem; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 0.9rem; }
+    .figure-img { width: 100%; aspect-ratio: 16 / 9; border-radius: 0.7rem; background: linear-gradient(135deg, rgba(96,165,250,0.16), rgba(52,211,153,0.12)); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.95rem; text-align: center; padding: 1rem; box-sizing: border-box; overflow: hidden; }
+    .figure-img img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 0.7rem; }
+    figcaption { margin-top: 0.65rem; color: var(--muted); font-size: 0.92rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; overflow: hidden; border-radius: 0.75rem; }
+    th, td { padding: 0.78rem 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; vertical-align: top; }
+    th { color: #c8d8f0; background: rgba(255,255,255,0.04); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    td { color: #e3ebf8; font-size: 0.95rem; }
+    tr:last-child td { border-bottom: none; }
+    .note { color: var(--muted); font-size: 0.92rem; }
+    ul { margin: 0.5rem 0 0.75rem 1.2rem; color: #d9e3f7; }
+    li { margin: 0.3rem 0; }
+    .two-col { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    code, pre { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+    pre { margin: 0.75rem 0 0; background: var(--code); padding: 1rem; border: 1px solid var(--border); border-radius: 0.75rem; overflow-x: auto; color: #d9e3f7; font-size: 0.9rem; line-height: 1.5; }
+    a { color: #93c5fd; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .repo-links { display: grid; gap: 0.6rem; margin-top: 0.75rem; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Learning Wherobots by Building a National AI Data Center Suitability Report</h1>
-      <div class="subtitle">
-        I built this project to learn Wherobots and to explore how spatial analysis can support more thoughtful public discussion about AI infrastructure.
-        The result is a national suitability report for AI data centers that processes millions of geometries, ranks candidate sites, and publishes the analysis as an interactive HTML document that people can review without needing the underlying compute environment.
-      </div>
-      <div class="meta">
-        <span class="pill">Personal learning project</span>
-        <span class="pill">Conservation-minded framing</span>
-        <span class="pill">National-scale spatial analysis</span>
-        <span class="pill">Interactive review document</span>
-      </div>
+      <div class="subtitle">I built this project to learn Wherobots and to explore how spatial analysis can support more thoughtful public discussion about AI infrastructure. The result is a national suitability report for AI data centers that processes millions of geometries, ranks candidate sites, and publishes the analysis as an interactive HTML document that people can review without needing the underlying compute environment.</div>
+      <div class="meta"><span class="pill">Personal learning project</span><span class="pill">Conservation-minded framing</span><span class="pill">National-scale spatial analysis</span><span class="pill">Interactive review document</span></div>
     </header>
 
     <main>
       <section>
         <h2>Why I built this</h2>
-        <p>
-          For me, this is a conservation-minded project: not about saying no to development, but about helping identify where development can create the most value with the least harm.
-          The point is to make siting decisions more transparent, more constructive, and easier to discuss across stakeholders.
-        </p>
-        <p>
-          AI data centers are resource-intensive. They depend on power, water, land, and supporting infrastructure, and they can also create real pressures on ecosystems and communities.
-          I wanted to build something that makes those tradeoffs visible instead of hiding them behind a single score.
-        </p>
+        <p>For me, this is a conservation-minded project: not about saying no to development, but about helping identify where development can create the most value with the least harm. The point is to make siting decisions more transparent, more constructive, and easier to discuss across stakeholders.</p>
+        <p>AI data centers are resource-intensive. They depend on power, water, land, and supporting infrastructure, and they can also create real pressures on ecosystems and communities. I wanted to build something that makes those tradeoffs visible instead of hiding them behind a single score.</p>
       </section>
 
       <section>
         <h2>Why I used Wherobots</h2>
-        <p>
-          I wanted a platform that could handle real spatial scale without forcing me into a slow, fragile workflow.
-        </p>
-        <p>
-          This project processed <strong>4.92 million geometries in 200.6 seconds</strong>, and the underlying analysis stack covers <strong>8 cloud tables</strong>,
-          <strong>1.75 million+ geometries</strong>, and an optimized footprint of roughly <strong>430.7 MB</strong> instead of about <strong>2.9 GB raw equivalent</strong>.
-          That scale matters because suitability analysis only becomes useful when it can be rerun quickly as assumptions change.
-        </p>
-        <p>
-          Wherobots made that possible. It let me run spatial joins, distance calculations, constraint masking, weighted scoring, benchmarking, and scenario re-evaluation
-          without spending my time managing infrastructure.
-        </p>
+        <p>I wanted a platform that could handle real spatial scale without forcing me into a slow, fragile workflow.</p>
+        <p>This project processed <strong>4.92 million geometries in 200.6 seconds</strong>, and the underlying analysis stack covers <strong>8 cloud tables</strong>, <strong>1.75 million+ geometries</strong>, and an optimized footprint of roughly <strong>430.7 MB</strong> instead of about <strong>2.9 GB raw equivalent</strong>. That scale matters because suitability analysis only becomes useful when it can be rerun quickly as assumptions change.</p>
+        <p>Wherobots made that possible. It let me run spatial joins, distance calculations, constraint masking, weighted scoring, benchmarking, and scenario re-evaluation without spending my time managing infrastructure.</p>
       </section>
 
       <section>
         <h2>What I was trying to learn</h2>
-        <p>
-          I wanted to understand how far I could push a cloud spatial workflow while still producing something that a non-technical audience could review.
-          The answer was to combine Wherobots for the heavy computation with a document-style HTML report for presentation.
-        </p>
-        <p>
-          The report, <code>runner/national_suitability_report.html</code>, is the public-facing layer of the analysis.
-          It includes an interactive map, a ranked candidate leaderboard, benchmarking tables, provenance, methodology, and a what-if sandbox for changing ranking weights.
-        </p>
+        <p>I wanted to understand how far I could push a cloud spatial workflow while still producing something that a non-technical audience could review. The answer was to combine Wherobots for the heavy computation with a document-style HTML report for presentation.</p>
+        <p>The report, <code>runner/national_suitability_report.html</code>, is the public-facing layer of the analysis. It includes an interactive map, a ranked candidate leaderboard, benchmarking tables, provenance, methodology, and a what-if sandbox for changing ranking weights.</p>
       </section>
 
       <section>
         <h2>Why the interactive report matters</h2>
-        <p>
-          The HTML report is where the analysis becomes useful for public review. It is not just a visualization — it is a way for users to interrogate the assumptions behind the ranking.
-        </p>
-        <p>
-          The map is interactive, searchable, and configurable. Users can change basemaps, add WMS/WFS services, and bring in external layers to compare candidate sites against their own data or public reference layers.
-          That matters because spatial decisions are rarely made from one dataset alone. Being able to add data makes the report more useful for collaboration, because different stakeholders can overlay the information that matters to them:
-          local context, community knowledge, infrastructure plans, environmental constraints, or jurisdictional boundaries.
-        </p>
-        <p>
-          The sandbox is especially valuable because users can adjust the ranking weights and immediately see how the candidate ordering changes.
-          That makes the tradeoffs tangible instead of theoretical.
-        </p>
+        <p>The HTML report is where the analysis becomes useful for public review. It is not just a visualization — it is a way for users to interrogate the assumptions behind the ranking.</p>
+        <p>The map is interactive, searchable, and configurable. Users can change basemaps, add WMS/WFS services, and bring in external layers to compare candidate sites against their own data or public reference layers. That matters because spatial decisions are rarely made from one dataset alone. Being able to add data makes the report more useful for collaboration, because different stakeholders can overlay the information that matters to them: local context, community knowledge, infrastructure plans, environmental constraints, or jurisdictional boundaries.</p>
+        <p>The sandbox is especially valuable because users can adjust the ranking weights and immediately see how the candidate ordering changes. That makes the tradeoffs tangible instead of theoretical.</p>
       </section>
 
       <section>
         <h2>Report overview</h2>
         <div class="grid">
           <figure>
-            <div class="figure-img">[Screenshot placeholder: full report overview showing map, metrics, and leaderboard]</div>
+            <div class="figure-img"><img src="figure2.png" alt="Screenshot of the national data center siting suitability report with the map and candidate leaderboard." /></div>
             <figcaption><strong>Figure 1.</strong> The report combines a map, summary metrics, and a ranked candidate list into one reviewable spatial document.</figcaption>
           </figure>
           <figure>
-            <div class="figure-img">[Screenshot placeholder: interactive map controls and candidate search]</div>
+            <div class="figure-img"><img src="figure3.png" alt="Screenshot of the report's interactive map controls and layer toggles." /></div>
             <figcaption><strong>Figure 2.</strong> The map supports searchable layers, configurable basemaps, and optional WMS/WFS services.</figcaption>
           </figure>
         </div>
@@ -342,17 +111,9 @@
           <li>benchmark candidates against regional baselines</li>
           <li>publish the result as an interactive HTML report</li>
         </ol>
-        <p>
-          The scoring model uses three main weights:
-        </p>
-        <ul>
-          <li><strong>Power grid proximity: 50%</strong></li>
-          <li><strong>Recycled water proximity: 30%</strong></li>
-          <li><strong>Parcel size: 20%</strong></li>
-        </ul>
-        <p>
-          Those weights reflect the practical requirements of AI infrastructure while keeping environmental and resource considerations visible.
-        </p>
+        <p>The scoring model uses three main weights:</p>
+        <ul><li><strong>Power grid proximity: 50%</strong></li><li><strong>Recycled water proximity: 30%</strong></li><li><strong>Parcel size: 20%</strong></li></ul>
+        <p>Those weights reflect the practical requirements of AI infrastructure while keeping environmental and resource considerations visible.</p>
       </section>
 
       <section>
@@ -361,14 +122,7 @@
           <div>
             <h3>Input layer scale</h3>
             <table>
-              <thead>
-                <tr>
-                  <th>Dataset</th>
-                  <th>Feature count</th>
-                  <th>Relative scale</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Dataset</th><th>Feature count</th><th>Relative scale</th><th>Notes</th></tr></thead>
               <tbody>
                 <tr><td>NSW Transport Network (Rail)</td><td>275,421</td><td>Largest layer</td><td>Transport context</td></tr>
                 <tr><td>NSW Biodiversity Constraint Zones</td><td>262,258</td><td>Very large</td><td>Environmental exclusion</td></tr>
@@ -384,12 +138,7 @@
           <div>
             <h3>Processing and storage comparison</h3>
             <table>
-              <thead>
-                <tr>
-                  <th>Measure</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Measure</th><th>Value</th></tr></thead>
               <tbody>
                 <tr><td>Geometries queried</td><td>4,920,000</td></tr>
                 <tr><td>Query runtime</td><td>200.6 seconds</td></tr>
@@ -399,16 +148,9 @@
                 <tr><td>Spatial tables</td><td>8</td></tr>
               </tbody>
             </table>
-
             <h3 style="margin-top:1rem;">Scoring weights</h3>
             <table>
-              <thead>
-                <tr>
-                  <th>Criterion</th>
-                  <th>Weight</th>
-                  <th>Why it matters</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Criterion</th><th>Weight</th><th>Why it matters</th></tr></thead>
               <tbody>
                 <tr><td>Power proximity</td><td>50%</td><td>AI data centers depend on reliable grid access</td></tr>
                 <tr><td>Recycled water proximity</td><td>30%</td><td>Cooling feasibility and resource efficiency</td></tr>
@@ -421,59 +163,27 @@
 
       <section>
         <h2>How I think about the planning question</h2>
-        <p>
-          My background in conservation shaped this project. I’m not trying to use technology to say “no” to development.
-          I’m trying to use it to ask better questions about where development belongs, where it creates value, and how to reduce unnecessary conflict between infrastructure, ecosystems, and communities.
-        </p>
-        <p>
-          That is why the report includes explicit constraint layers, benchmarking, and scenario controls. The aim is to support better judgment, not replace it.
-        </p>
+        <p>My background in conservation shaped this project. I’m not trying to use technology to say “no” to development. I’m trying to use it to ask better questions about where development belongs, where it creates value, and how to reduce unnecessary conflict between infrastructure, ecosystems, and communities.</p>
+        <p>That is why the report includes explicit constraint layers, benchmarking, and scenario controls. The aim is to support better judgment, not replace it.</p>
       </section>
 
       <section>
         <h2>Example candidate comparison</h2>
         <figure>
-          <div class="figure-img">[Screenshot placeholder: candidate leaderboard with raw and refined scores]</div>
+          <div class="figure-img"><img src="figure4.png" alt="Screenshot of the candidate leaderboard and ranking comparison table." /></div>
           <figcaption><strong>Figure 3.</strong> Adjusting ranking assumptions changes the candidate order immediately, making tradeoffs visible.</figcaption>
         </figure>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Candidate</th>
-              <th>Raw score</th>
-              <th>Refined score</th>
-              <th>Area (ha)</th>
-              <th>Power (km)</th>
-              <th>Water (km)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Top candidate</td><td>0.92</td><td>0.88</td><td>18.4</td><td>0.7</td><td>1.3</td></tr>
-            <tr><td>Second candidate</td><td>0.89</td><td>0.84</td><td>16.2</td><td>1.1</td><td>0.9</td></tr>
-            <tr><td>Third candidate</td><td>0.86</td><td>0.81</td><td>22.7</td><td>2.4</td><td>1.8</td></tr>
-          </tbody>
-        </table>
-        <p class="note">These are example output rows to show how the report presents ranked candidates in a reviewer-friendly format.</p>
       </section>
 
       <section>
         <h2>Why I think this is useful</h2>
-        <p>
-          This project taught me that Wherobots is more than a faster way to run spatial SQL. It is a way to make large-scale spatial analysis practical for real decision support.
-          It gave me a path from raw geodata to a polished, reviewable spatial document — one that can be opened by a stakeholder, examined by a technical reviewer, and discussed in public.
-        </p>
-        <p>
-          For a personal project, that was the goal: learn the platform, test it at real scale, create something useful, and contribute to the broader discussion about responsible AI infrastructure.
-        </p>
+        <p>This project taught me that Wherobots is more than a faster way to run spatial SQL. It is a way to make large-scale spatial analysis practical for real decision support. It gave me a path from raw geodata to a polished, reviewable spatial document — one that can be opened by a stakeholder, examined by a technical reviewer, and discussed in public.</p>
+        <p>For a personal project, that was the goal: learn the platform, test it at real scale, create something useful, and contribute to the broader discussion about responsible AI infrastructure.</p>
       </section>
 
       <section>
         <h2>Repository links</h2>
-        <div class="repo-links">
-          <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">Wherobots spatial SQL and geospatial notebook workflows</a>
-          <a href="<YOUR_REPO_LINK_HERE>" target="_blank" rel="noreferrer">Map-in-a-Box Spatial Document Crafter</a>
-        </div>
+        <div class="repo-links"><a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">Wherobots spatial SQL and geospatial notebook workflows</a><a href="<YOUR_REPO_LINK_HERE>" target="_blank" rel="noreferrer">Map-in-a-Box Spatial Document Crafter</a></div>
       </section>
     </main>
   </div>
