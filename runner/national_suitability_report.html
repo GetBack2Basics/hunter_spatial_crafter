@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>National Siting Suitability Report</title>
+<title>National Data Center Siting Suitability Report</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -443,7 +443,7 @@ input[type="range"]::-moz-range-thumb {
 <div class="container">
   <header>
     <div>
-      <h1>National Siting Suitability Report</h1>
+      <h1>National Data Center Siting Suitability Report</h1>
       <div class="subtitle">Interactive 5-Tier Spatial Constraint Model & Benchmarking</div>
     </div>
     <a href="https://cloud.wherobots.com" target="_blank" class="metadata-pill" style="text-decoration: none; color: #60a5fa;">Wherobots Spark Engine ↗</a>
@@ -571,7 +571,7 @@ input[type="range"]::-moz-range-thumb {
       <div>
         <p>The candidate sites are scored and ranked according to a <strong>5-Tier Spatial Constraint Model</strong> disaggregated into three primary weighted indices:</p>
         <ul style="margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 1rem;">
-          <li><strong>Power Grid Proximity (50% Weight):</strong> Evaluates proximity to major transmission substations (132kV+). Full points (1.0) are awarded for distances between 100m and 500m. A decay function applies for larger distances, reaching 0.0 at 5km. Setbacks closer than 100m are penalized to 0.7 to satisfy EMF safety/noise requirements.</li>
+          <li><strong>Power Grid Proximity (50% Weight):</strong> Evaluates proximity to major transmission substations (132kV+). Full points (1.0) are awarded for distances between 100m and 500m. A decay function applies for larger distances, reaching 0 at 5km. Setbacks closer than 100m are penalized to 0.7 to satisfy EMF safety/noise requirements.</li>
           <li><strong>Recycled Water Proximity (30% Weight):</strong> Measures distance to wastewater treatment plants (WWTW) as sustainable cooling resources. Scores decay linearly from 1.0 (at &le;1km) down to 0.0 (at &ge;10km).</li>
           <li><strong>Available Land Area (20% Weight):</strong> Scores land parcel size for hyperscale development. Land parcels &ge;15 hectares receive a full score of 1.0. Parcels below 3 hectares receive a baseline of 0.1, with a linear score interpolation in between.</li>
         </ul>
@@ -969,7 +969,7 @@ input[type="range"]::-moz-range-thumb {
       <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 1rem; border-radius: 0.5rem;">
         <h4 style="margin: 0 0 0.5rem 0; color: #fbbf24; font-size: 0.95rem;">Key Benefits of Client-Side Simulation Architecture:</h4>
         <ul style="margin: 0; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.35rem;">
-          <li><strong>Zero Cloud Cost:</strong> Eliminates continuous per-query cloud compute costs ($0.00 incurred during interactive slider sessions).</li>
+          <li><strong>Zero Cloud Cost:</strong> Eliminates continuous per-query cloud compute costs ($0 incurred during interactive slider sessions).</li>
           <li><strong>Offline Portability:</strong> The HTML report remains fully interactive when emailed, downloaded, or viewed offline.</li>
           <li><strong>Instant Responsiveness:</strong> 60 FPS slider manipulation without waiting for network round-trips or server cold starts.</li>
         </ul>
