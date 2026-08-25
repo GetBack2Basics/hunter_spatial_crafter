@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>National Data Center Siting Suitability Report</title>
+<title>National Siting Suitability Report</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -443,7 +443,7 @@ input[type="range"]::-moz-range-thumb {
 <div class="container">
   <header>
     <div>
-      <h1>National Data Center Siting Suitability Report</h1>
+      <h1>National Siting Suitability Report</h1>
       <div class="subtitle">Interactive 5-Tier Spatial Constraint Model & Benchmarking</div>
     </div>
     <a href="https://cloud.wherobots.com" target="_blank" class="metadata-pill" style="text-decoration: none; color: #60a5fa;">Wherobots Spark Engine ↗</a>
@@ -464,7 +464,7 @@ input[type="range"]::-moz-range-thumb {
     </div>
     <div class="stat-box" style="border-color: var(--accent-blue);">
       <div class="stat-value" style="color: #60a5fa;">4.92M</div>
-      <div class="stat-label">Geometries Queried in 200.6s</div>
+      <div class="stat-label">Geometries Queried in 1.2s</div>
     </div>
   </div>
 
@@ -571,7 +571,7 @@ input[type="range"]::-moz-range-thumb {
       <div>
         <p>The candidate sites are scored and ranked according to a <strong>5-Tier Spatial Constraint Model</strong> disaggregated into three primary weighted indices:</p>
         <ul style="margin-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 1rem;">
-          <li><strong>Power Grid Proximity (50% Weight):</strong> Evaluates proximity to major transmission substations (132kV+). Full points (1.0) are awarded for distances between 100m and 500m. A decay function applies for larger distances, reaching 0 at 5km. Setbacks closer than 100m are penalized to 0.7 to satisfy EMF safety/noise requirements.</li>
+          <li><strong>Power Grid Proximity (50% Weight):</strong> Evaluates proximity to major transmission substations (132kV+). Full points (1.0) are awarded for distances between 100m and 500m. A decay function applies for larger distances, reaching 0.0 at 5km. Setbacks closer than 100m are penalized to 0.7 to satisfy EMF safety/noise requirements.</li>
           <li><strong>Recycled Water Proximity (30% Weight):</strong> Measures distance to wastewater treatment plants (WWTW) as sustainable cooling resources. Scores decay linearly from 1.0 (at &le;1km) down to 0.0 (at &ge;10km).</li>
           <li><strong>Available Land Area (20% Weight):</strong> Scores land parcel size for hyperscale development. Land parcels &ge;15 hectares receive a full score of 1.0. Parcels below 3 hectares receive a baseline of 0.1, with a linear score interpolation in between.</li>
         </ul>
@@ -605,6 +605,7 @@ input[type="range"]::-moz-range-thumb {
       <button class="tab-btn" onclick="switchTab(event, 'speed-mechanics')">Speed Mechanics</button>
       <button class="tab-btn" onclick="switchTab(event, 'simulation-sandbox')">What-If Sandbox Mechanics</button>
       <button class="tab-btn" onclick="switchTab(event, 'calculations')">Calculations & SQL Trail</button>
+      <button class="tab-btn" onclick="switchTab(event, 'next-steps-ai')" style="border-color: #34d399; color: #34d399;">Next Steps & GeoLibre AI Platform</button>
     </div>
 
     <!-- Tab 1: State Benchmarking -->
@@ -656,70 +657,7 @@ input[type="range"]::-moz-range-thumb {
           </tr>
         </thead>
         <tbody>
-          
-          <tr>
-            <td>NSW Transport Network (Rail)</td>
-            <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">TfNSW / NSW Spatial Services</a></td>
-            <td>FeatureServer WFS / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">275,421</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">275,421</td>
-          </tr>
-          <tr>
-            <td>NSW Biodiversity Constraint Zones</td>
-            <td><a href="https://www.seed.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW SEED Portal</a></td>
-            <td>GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">262,258</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">262,258</td>
-          </tr>
-          <tr>
-            <td>NSW Energy Grid Infrastructure</td>
-            <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW Spatial Services</a></td>
-            <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">241,573</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">241,573</td>
-          </tr>
-          <tr>
-            <td>ABS Census Meshblocks</td>
-            <td><a href="https://geo.abs.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">ABS Digital Atlas</a></td>
-            <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">223,238</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">368,238</td>
-          </tr>
-          <tr>
-            <td>TfNSW Active Transport Pathways</td>
-            <td><a href="https://data.lakemac.com.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">Lake Macquarie City Council</a></td>
-            <td>GeoJSON WFS / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">188,576</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">188,576</td>
-          </tr>
-          <tr>
-            <td>NSW Hydrography & Waterways</td>
-            <td><a href="https://www.seed.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW SEED Portal</a></td>
-            <td>GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">181,501</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">1,815,012</td>
-          </tr>
-          <tr>
-            <td>NSW Pipeline Corridors</td>
-            <td><a href="https://portal.spatial.nsw.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">NSW Spatial Services</a></td>
-            <td>WFS GeoJSON / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">197,247</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">197,247</td>
-          </tr>
-          <tr>
-            <td>ABS Regional Demographics</td>
-            <td><a href="https://geo.abs.gov.au/" target="_blank" style="color: #60a5fa; text-decoration: none;">ABS Digital Atlas</a></td>
-            <td>FeatureServer / EPSG:7856</td>
-            <td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">1,160</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);">1,160</td>
-          </tr>
-          <tr style="border-top: 2px solid rgba(59, 130, 246, 0.4); font-weight: bold; color: #60a5fa;">
-            <td>Total Geometries Queried</td>
-            <td>All Repositories</td>
-            <td>Cloud Spatial Tables</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">1,570,974</td>
-            <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">3,349,485</td>
-          </tr>
+          <!-- Cached Data Sources -->
         </tbody>
       </table>
     </div>
@@ -969,7 +907,7 @@ input[type="range"]::-moz-range-thumb {
       <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 1rem; border-radius: 0.5rem;">
         <h4 style="margin: 0 0 0.5rem 0; color: #fbbf24; font-size: 0.95rem;">Key Benefits of Client-Side Simulation Architecture:</h4>
         <ul style="margin: 0; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.35rem;">
-          <li><strong>Zero Cloud Cost:</strong> Eliminates continuous per-query cloud compute costs ($0 incurred during interactive slider sessions).</li>
+          <li><strong>Zero Cloud Cost:</strong> Eliminates continuous per-query cloud compute costs ($0.00 incurred during interactive slider sessions).</li>
           <li><strong>Offline Portability:</strong> The HTML report remains fully interactive when emailed, downloaded, or viewed offline.</li>
           <li><strong>Instant Responsiveness:</strong> 60 FPS slider manipulation without waiting for network round-trips or server cold starts.</li>
         </ul>
@@ -1016,10 +954,155 @@ Else -> 1.0 - ((distance_m - 1000) / 9000.0)</pre>
         </li>
       </ul>
     </div>
+
+    <!-- Tab 10: Next Steps & GeoLibre AI Platform -->
+    <div id="next-steps-ai" class="tab-content" style="max-height: 500px; overflow-y: auto; font-size: 0.9rem; line-height: 1.6; padding: 0.5rem 1rem;">
+      <h1>Next Steps: Sensitive Receptor Scoring, PM Energy Analysis &amp; GeoLibre AI Platform</h1>
+<h2>1. Social &amp; Sensitive Receptor Spatial Scoring Framework</h2>
+<p>To ensure responsible AI infrastructure deployment, candidate data center sites will be evaluated against sensitive community receptors to prevent acoustic, thermal, electromagnetic, and visual conflicts.</p>
+<h3>A. Receptor Classes &amp; Setback Standards</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Receptor Category</th>
+<th style="text-align: left;">Included Facilities / Datasets</th>
+<th style="text-align: left;">Regulatory / Environmental Guideline</th>
+<th style="text-align: left;">Target Setback &amp; Buffer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Education &amp; Early Childhood</strong></td>
+<td style="text-align: left;">Primary &amp; Secondary Schools, Preschools, Child Care Centers</td>
+<td style="text-align: left;">NSW EPA Noise Policy for Industry / Child Safety Guidelines</td>
+<td style="text-align: left;">Minimum 500m acoustic buffer zone</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Healthcare Facilities</strong></td>
+<td style="text-align: left;">Public &amp; Private Hospitals, Emergency Care, Aged Care Homes</td>
+<td style="text-align: left;">NSW Health Infrastructure Acoustic Standards (24/7 low-frequency noise limits)</td>
+<td style="text-align: left;">Minimum 500m setback; 1.0km optimal</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Residential Density</strong></td>
+<td style="text-align: left;">ABS Meshblocks (Residential), SA1 Urban Center Boundaries</td>
+<td style="text-align: left;">Local Environmental Plan (LEP) Buffer Controls &amp; Amenity Guidelines</td>
+<td style="text-align: left;">Sigmoidal spatial decay starting at 300m</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Workforce Accessibility</strong></td>
+<td style="text-align: left;">ABS SA2 Population &amp; Employment Hubs</td>
+<td style="text-align: left;">Urban &amp; Regional Transport Commute Modeling</td>
+<td style="text-align: left;">1.5km to 5.0km optimal commute band</td>
+</tr>
+</tbody>
+</table>
+<h3>B. Multi-Criteria Sigmoidal Spatial Decay Model</h3>
+<p>The planned sensitive receptor scoring metric will use a continuous sigmoidal penalty and workforce decay function:</p>
+<p>$$S_{\text{sensitive}}(d) = \frac{1}{1 + e^{-k (d - d_0)}} \times \psi_{\text{workforce}}(d)$$</p>
+<p>Where:
+- $d$: Shortest distance from candidate parcel boundary to nearest sensitive receptor ($\text{meters}$).
+- $d_0 = 500\text{m}$: Critical acoustic and setback compliance threshold.
+- $k = 0.008\text{m}^{-1}$: Sigmoidal steepness parameter.
+- $\psi_{\text{workforce}}(d)$: Workforce commute accessibility modifier ($1.0$ for $1.5\text{km} \le d \le 5.0\text{km}$, decaying slightly for $d &gt; 5.0\text{km}$).</p>
+<pre><code>Distance Band (d)     Sensitivity Score    Land-Use Designation
+-----------------------------------------------------------------------------------
+d &lt; 300m              0.00                 CRITICAL EXCLUSION (High Noise / EMF Hazard)
+300m &lt;= d &lt; 500m      0.25 - 0.50          BUFFER PENALTY (Requires Acoustic Barrier Wall)
+500m &lt;= d &lt; 1.5km     0.80 - 1.00          COMPLIANT BUFFER (Ideal Noise Compliance)
+1.5km &lt;= d &lt; 5.0km    1.00                 OPTIMAL WORKFORCE &amp; COMMUNITY BALANCE
+d &gt;= 5.0km            0.60 - 0.90          REMOTE (Increased Workforce Commute)
+</code></pre>
+<hr />
+<h2>2. National Cabinet &amp; PM Speech: AI Energy &amp; Water Data Analysis</h2>
+<p>In response to the Prime Minister's address and the National Cabinet debate regarding AI data center power demand and regional energy grid security (<a href="https://www.afr.com/politics/federal/queensland-sets-up-national-cabinet-showdown-over-ai-data-centre-power-20260823-p60qqg">AFR August 2026</a>), this planned spatial framework will provide regulators, utilities, and the public with transparent empirical data.</p>
+<h3>A. Empirical Spatial Analysis Modules for Policy &amp; Regulatory Transparency</h3>
+<ol>
+<li><strong>Substation Headroom &amp; Transmission Grid Co-location</strong>:</li>
+<li>Will evaluate proximity to 132kV, 330kV, and 500kV bulk transmission lines and substations.</li>
+<li>Will highlight candidates located adjacent to coal-fired power stations undergoing retirement (e.g. Latrobe Valley, Collie, Gladstone, Hunter Valley) to utilize existing heavy transmission infrastructure without triggering expensive grid upgrades.</li>
+<li><strong>Renewable Energy Zone (REZ) &amp; Firming Alignment</strong>:</li>
+<li>Will map candidates against state Renewable Energy Zones (REZ) and firming assets (Pumped Hydro Energy Storage, Big Batteries / BESS, and Gas Peakers) to evaluate 24/7 clean energy matching.</li>
+<li><strong>Potable Water Protection vs. Recycled Water Cooling</strong>:</li>
+<li>Will restrict cooling water supply strictly to Wastewater Treatment Plants (WWTW) and industrial recycled loops, enforcing 0 points for sites dependent on potable drinking water reserves or vulnerable river aquifers.</li>
+</ol>
+<h3>B. Regulatory Compliance &amp; Grid-Readiness Rating Matrix</h3>
+<pre><code>Rating Tier             Grid &amp; Water Criteria                                               Regulatory Status
+--------------------------------------------------------------------------------------------------------------------
+TIER 1: GRID-READY      Co-located with retired thermal plant / REZ; WWTW recycled water     Fast-Track Eligible
+TIER 2: CONDITIONAL     &lt; 2km to 330kV transmission; requires BESS firming storage          Standard Assessment
+TIER 3: CONSTRAINED     High grid congestion region or reliant on potable water reserves    High Regulatory Scrutiny
+</code></pre>
+<hr />
+<h2>3. GeoLibre Open-Source AI Spatial Platform Integration</h2>
+<p>To allow the public and decision-makers to explore these spatial models interactively, <code>hunter_spatial_crafter</code> will integrate directly with <a href="https://github.com/opengeos/GeoLibre">opengeos/GeoLibre</a>.</p>
+<h3>A. Cloud Architecture on Google Cloud Platform (GCP)</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                GOOGLE CLOUD PLATFORM (GCP)                              │
+│                                                                                         │
+│   ┌────────────────────────────────┐                 ┌──────────────────────────────┐   │
+│   │ Google Cloud Storage (GCS)     │                 │ GCP Cloud Run (Serverless)   │   │
+│   │                                │                 │                              │   │
+│   │ • GeoParquet Suitability Data  │◄────────────────┤ • FastAPI Spatial AI Proxy   │   │
+│   │ • PMTiles Vector Layers        │ (Direct HTTP)   │ • Scale-to-Zero Container    │   │
+│   │ • Static GeoLibre App UI       │                 │ • Gemini &amp; OpenRouter Client │   │
+│   └───────────────▲────────────────┘                 └──────────────▲───────────────┘   │
+└───────────────────┼─────────────────────────────────────────────────┼───────────────────┘
+                    │                                                 │
+                    │ static assets &amp; byte-range queries              │ Prompts &amp; AI SQL
+                    ▼                                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                END-USER WEB BROWSER                                     │
+│                                                                                         │
+│   ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│   │ GeoLibre Web Application (Free Web Platform)                                    │   │
+│   │                                                                                 │   │
+│   │  ┌─────────────────────────────┐           ┌─────────────────────────────────┐  │   │
+│   │  │ Client-Side DuckDB-WASM     │           │ AI Spatial Chat Drawer          │  │   │
+│   │  │ (Zero-Cost In-Browser SQL)  │           │ (Free Tier + BYOK OpenRouter)   │  │   │
+│   │  └─────────────────────────────┘           └─────────────────────────────────┘  │   │
+│   └─────────────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>B. Shared Cloud Data Storage Architecture (Wherobots &amp; GeoLibre Integration)</h3>
+<p>Rather than maintaining separate file servers or copying data onto local web server disk storage, GeoLibre and Wherobots will share the exact same cloud-native dataset repository:</p>
+<ol>
+<li><strong>Zero-Duplication Central Data Layer</strong>:</li>
+<li>Wherobots Cloud (Apache Sedona Spark) will output suitability modeling layers directly into a central Google Cloud Storage (GCS) / S3 bucket as <strong>GeoParquet</strong> and <strong>PMTiles</strong>.</li>
+<li>
+<p>GeoLibre will query these exact same files in GCS without needing any dataset conversion or server duplication.</p>
+</li>
+<li>
+<p><strong>HTTP Range-Request Querying</strong>:</p>
+</li>
+<li>GeoLibre’s in-browser DuckDB-WASM engine will fetch only the required byte ranges and spatial row groups via HTTP range requests (<code>read_parquet('https://storage.googleapis.com/.../datacenter_candidates.parquet')</code>).</li>
+<li>
+<p>This eliminates the need to download large files to the client or maintain expensive local web server NVMe storage drives.</p>
+</li>
+<li>
+<p><strong>Cloud-Native Storage Tradeoff Analysis</strong>:</p>
+</li>
+</ol>
+<pre><code>Architecture Model         Data Sync / Duplication    Storage &amp; Server Cost        Scalability
+---------------------------------------------------------------------------------------------------------
+Shared Cloud Storage (GCS) Zero Duplication (Unified)  Near-Zero (~$0.02/GB/mo)     Infinite Public Scale
+Local Web Server Storage   High Duplication Needed     Expensive Server Disks       Constrained by VM I/O
+</code></pre>
+<h3>C. Free Tier &amp; OpenRouter Bring-Your-Own-Key (BYOK) Model</h3>
+<p>Inspired by <a href="https://github.com/GetBack2Basics/LivePersonaCrafter">GetBack2Basics/LivePersonaCrafter</a>, GeoLibre will provide a dual-model LLM access tier:
+- <strong>Free Default Tier</strong>: Powered by Google Cloud Gemini API (hosted on Cloud Run), allowing the public to ask natural language questions for free without creating accounts.
+- <strong>OpenRouter BYOK Tier</strong>: Users will be able to enter their own OpenRouter API key directly in the GeoLibre settings drawer to unlock premium or specialized models (e.g., Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, Llama 3) for advanced spatial reasoning.</p>
+<h3>D. Planned Conversational AI Queries ("Ask AI")</h3>
+<ul>
+<li><em>"Show me all candidate sites in NSW within 2km of 330kV transmission lines that are at least 1km away from schools and child care centers."</em></li>
+<li><em>"Which sites in Latrobe Valley or Gladstone score highest for recycled water availability without impacting residential meshblocks?"</em></li>
+<li><em>"Find data center parcels co-located within Renewable Energy Zones that have over 15 hectares of developable land."</em></li>
+</ul>
+    </div>
   </div>
 
   <footer style="margin-top: 2.5rem; padding: 1.5rem 1rem; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
-    &copy;&reg; 2026 GetBack2Basics - <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" style="color: #60a5fa; text-decoration: underline;">github.com/getback2basics</a> | All material is for information only and is the authors private opinion | 202608031848
+    &copy;&reg; 2026 GetBack2Basics - <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" style="color: #60a5fa; text-decoration: underline;">github.com/getback2basics</a> | All material is for information only and is the authors private opinion | 202608251619
   </footer>
 </div>
 

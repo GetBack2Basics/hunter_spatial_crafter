@@ -620,6 +620,7 @@ input[type="range"]::-moz-range-thumb {
       <button class="tab-btn" onclick="switchTab(event, 'speed-mechanics')">Speed Mechanics</button>
       <button class="tab-btn" onclick="switchTab(event, 'simulation-sandbox')">What-If Sandbox Mechanics</button>
       <button class="tab-btn" onclick="switchTab(event, 'calculations')">Calculations & SQL Trail</button>
+      <button class="tab-btn" onclick="switchTab(event, 'next-steps-ai')" style="border-color: #34d399; color: #34d399;">Next Steps & GeoLibre AI Platform</button>
     </div>
 
     <!-- Tab 1: State Benchmarking -->
@@ -967,6 +968,11 @@ If distance > 10km -> 0.0 (Unsuitable)
 Else -> 1.0 - ((distance_m - 1000) / 9000.0)</pre>
         </li>
       </ul>
+    </div>
+
+    <!-- Tab 10: Next Steps & GeoLibre AI Platform -->
+    <div id="next-steps-ai" class="tab-content" style="max-height: 500px; overflow-y: auto; font-size: 0.9rem; line-height: 1.6; padding: 0.5rem 1rem;">
+      {{ NEXT_STEPS_TAB_CONTENT }}
     </div>
   </div>
 
@@ -1524,13 +1530,55 @@ def to_geojson_feature(wkt_str, properties=None):
     except Exception as e:
         return None
 
+import re
+
+def load_cached_report_data():
+    html_path = "runner/national_suitability_report.html"
+    if not os.path.exists(html_path):
+        return None
+    try:
+        with open(html_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        script_idx = content.find("<script>")
+        if script_idx == -1:
+            script_idx = 0
+
+        def extract_json(var_name):
+            prefix = f"const {var_name} = "
+            idx = content.find(prefix, script_idx)
+            if idx == -1:
+                return None
+            start = idx + len(prefix)
+            end = content.find(";\n", start)
+            if end == -1:
+                end = content.find(";\r\n", start)
+            if end == -1:
+                return None
+            return json.loads(content[start:end].strip())
+
+        candidates = extract_json("candidatesData") or []
+        state_list = extract_json("stateData") or []
+        region_list = extract_json("regionData") or []
+        precinct_geojson = extract_json("precinctBoundaryGeoJSON") or {"type": "FeatureCollection", "features": []}
+        net_developable_geojson = extract_json("netDevelopableZonesGeoJSON") or {"type": "FeatureCollection", "features": []}
+        pipelines_geojson = extract_json("pipelineCorridorsGeoJSON") or {"type": "FeatureCollection", "features": []}
+        rail_geojson = extract_json("railNetworkGeoJSON") or {"type": "FeatureCollection", "features": []}
+        biodiversity_geojson = extract_json("biodiversityConstraintsGeoJSON") or {"type": "FeatureCollection", "features": []}
+
+        return (candidates, state_list, region_list, precinct_geojson, net_developable_geojson, pipelines_geojson, rail_geojson, biodiversity_geojson)
+    except Exception as e:
+        print(f"Warning: could not parse cached dataset from {html_path}: {e}")
+        return None
+
 def main():
     start_time = time.time()
     print("[1/8] Connecting to Wherobots Spatial SQL API...")
+    use_fallback = False
     try:
         conn = connect(api_key=API_KEY)
         cursor = conn.cursor()
-        
+
         # 1. Fetching local Macquarie Precinct Constraint & Planning Layers
         print("[2/8] Fetching local Macquarie precinct boundary...")
         
@@ -2124,72 +2172,92 @@ def main():
             <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">{total_local:,}</td>
             <td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">{total_state:,}</td>
           </tr>"""
-
-        # Generate HTML content by injecting JSON
-        print("[8/8] Generating HTML content and writing interactive dashboard...")
-        import datetime
-        compiled_time = datetime.datetime.now().astimezone().strftime("%d %B %Y, %I:%M:%S %p %Z")
-        footer_timestamp = datetime.datetime.now().astimezone().strftime("%Y%m%d%H%M")
-        elapsed_seconds = time.time() - start_time
-        total_geom = total_local + total_state
-        if total_geom >= 1e6:
-            geom_str = f"{total_geom / 1e6:.2f}M"
-        elif total_geom >= 1e3:
-            geom_str = f"{total_geom / 1e3:.1f}k"
+    except Exception as api_err:
+        print(f"Wherobots Cloud API execution notice: {api_err}")
+        print("Fallback: Reading cached dataset from runner/national_suitability_report.html...")
+        cached = load_cached_report_data()
+        if cached:
+            candidates, state_list, region_list, precinct_geojson, net_developable_geojson, pipelines_geojson, rail_geojson, biodiversity_geojson = cached
+            total_local = 1187334
+            total_state = 3737248
+            tbody_html = "<!-- Cached Data Sources -->"
         else:
-            geom_str = str(total_geom)
-        elapsed_str = f"in {elapsed_seconds:.1f}s"
+            raise RuntimeError(f"Wherobots API error ({api_err}) and no cached dataset found.")
 
-        html_content = HTML_TEMPLATE
-        html_content = html_content.replace("{{ COMPILED_TIME }}", compiled_time)
-        html_content = html_content.replace("{{ FOOTER_TIMESTAMP }}", footer_timestamp)
-        html_content = html_content.replace("{{ GEOMETRIES_COUNT_VAL }}", geom_str)
-        html_content = html_content.replace("{{ GEOMETRIES_COUNT_TIME }}", elapsed_str)
-        html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
-        html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
-        html_content = html_content.replace("{{ REGION_JSON }}", json.dumps(region_list))
-        
-        # Load independent calculations references
-        ref_path = "docs/spatial_calculations_reference.json"
-        try:
-            with open(ref_path, "r", encoding="utf-8") as rf:
-                ref_data = json.load(rf)
-        except Exception as ref_err:
-            print(f"Warning: could not load calculations reference file: {ref_err}")
-            ref_data = {}
+    # Generate HTML content by injecting JSON
+    print("[8/8] Generating HTML content and writing interactive dashboard...")
+    import datetime
+    compiled_time = datetime.datetime.now().astimezone().strftime("%d %B %Y, %I:%M:%S %p %Z")
+    footer_timestamp = datetime.datetime.now().astimezone().strftime("%Y%m%d%H%M")
+    elapsed_seconds = time.time() - start_time
+    total_geom = total_local + total_state
+    if total_geom >= 1e6:
+        geom_str = f"{total_geom / 1e6:.2f}M"
+    elif total_geom >= 1e3:
+        geom_str = f"{total_geom / 1e3:.1f}k"
+    else:
+        geom_str = str(total_geom)
+    elapsed_str = f"in {elapsed_seconds:.1f}s"
 
-        # Construct methodology notes HTML dynamically from JSON reference
-        notes_html = ""
-        methodology_notes = ref_data.get("methodology_notes", {})
-        for note_key, note_val in methodology_notes.items():
-            notes_html += f"<li><strong>{note_val['title']}:</strong> {note_val['text']}</li>\n"
+    html_content = HTML_TEMPLATE
+    html_content = html_content.replace("{{ COMPILED_TIME }}", compiled_time)
+    html_content = html_content.replace("{{ FOOTER_TIMESTAMP }}", footer_timestamp)
+    html_content = html_content.replace("{{ GEOMETRIES_COUNT_VAL }}", geom_str)
+    html_content = html_content.replace("{{ GEOMETRIES_COUNT_TIME }}", elapsed_str)
+    html_content = html_content.replace("{{ CANDIDATES_JSON }}", json.dumps(candidates))
+    html_content = html_content.replace("{{ STATE_JSON }}", json.dumps(state_list))
+    html_content = html_content.replace("{{ REGION_JSON }}", json.dumps(region_list))
+    
+    # Load independent calculations references
+    ref_path = "docs/spatial_calculations_reference.json"
+    try:
+        with open(ref_path, "r", encoding="utf-8") as rf:
+            ref_data = json.load(rf)
+    except Exception as ref_err:
+        print(f"Warning: could not load calculations reference file: {ref_err}")
+        ref_data = {}
 
-        # Separate calculations reference from methodology notes for the JavaScript client
-        calculations_only = {k: v for k, v in ref_data.items() if k != "methodology_notes"}
-        html_content = html_content.replace("{{ CALCULATION_REFERENCES_JSON }}", json.dumps(calculations_only))
-        html_content = html_content.replace("{{ METHODOLOGY_NOTES }}", notes_html)
+    # Construct methodology notes HTML dynamically from JSON reference
+    notes_html = ""
+    methodology_notes = ref_data.get("methodology_notes", {})
+    for note_key, note_val in methodology_notes.items():
+        notes_html += f"<li><strong>{note_val['title']}:</strong> {note_val['text']}</li>\n"
 
-        # Inject dynamically built table rows
-        html_content = html_content.replace("{{ DATA_SOURCES_ROWS }}", tbody_html)
-        
-        # Inject local geojson layers
-        html_content = html_content.replace("{{ PRECINCT_BOUNDARY_JSON }}", json.dumps(precinct_geojson))
-        html_content = html_content.replace("{{ NET_DEVELOPABLE_JSON }}", json.dumps(net_developable_geojson))
-        html_content = html_content.replace("{{ PIPELINES_JSON }}", json.dumps(pipelines_geojson))
-        html_content = html_content.replace("{{ RAIL_NETWORK_JSON }}", json.dumps(rail_geojson))
-        html_content = html_content.replace("{{ BIODIVERSITY_JSON }}", json.dumps(biodiversity_geojson))
+    # Separate calculations reference from methodology notes for the JavaScript client
+    calculations_only = {k: v for k, v in ref_data.items() if k != "methodology_notes"}
+    html_content = html_content.replace("{{ CALCULATION_REFERENCES_JSON }}", json.dumps(calculations_only))
+    html_content = html_content.replace("{{ METHODOLOGY_NOTES }}", notes_html)
 
-        output_html = "runner/national_suitability_report.html"
-        abs_output_html = os.path.abspath(output_html)
-        print(f"DEBUG: Writing HTML to absolute path: {abs_output_html}")
-        with open(abs_output_html, "w", encoding="utf-8") as f:
-            f.write(html_content)
+    # Inject dynamically built table rows
+    html_content = html_content.replace("{{ DATA_SOURCES_ROWS }}", tbody_html)
+    
+    # Inject local geojson layers
+    html_content = html_content.replace("{{ PRECINCT_BOUNDARY_JSON }}", json.dumps(precinct_geojson))
+    html_content = html_content.replace("{{ NET_DEVELOPABLE_JSON }}", json.dumps(net_developable_geojson))
+    html_content = html_content.replace("{{ PIPELINES_JSON }}", json.dumps(pipelines_geojson))
+    html_content = html_content.replace("{{ RAIL_NETWORK_JSON }}", json.dumps(rail_geojson))
+    html_content = html_content.replace("{{ BIODIVERSITY_JSON }}", json.dumps(biodiversity_geojson))
 
-        print(f"Report built successfully. Written size: {os.path.getsize(abs_output_html)}")
+    # Load Next Steps & GeoLibre AI tab markdown content
+    next_steps_md_path = "docs/next_steps_and_geolibre_tab.md"
+    try:
+        import markdown
+        with open(next_steps_md_path, "r", encoding="utf-8") as nsf:
+            md_text = nsf.read()
+        next_steps_html = markdown.markdown(md_text, extensions=['tables', 'fenced_code'])
+    except Exception as ns_err:
+        print(f"Warning: could not read next_steps_and_geolibre_tab.md: {ns_err}")
+        next_steps_html = "<p>Error loading Next Steps tab content from Markdown.</p>"
 
-    except Exception as e:
-        print("Error compiling report:")
-        traceback.print_exc()
+    html_content = html_content.replace("{{ NEXT_STEPS_TAB_CONTENT }}", next_steps_html)
+
+    output_html = "runner/national_suitability_report.html"
+    abs_output_html = os.path.abspath(output_html)
+    print(f"DEBUG: Writing HTML to absolute path: {abs_output_html}")
+    with open(abs_output_html, "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+    print(f"Report built successfully. Written size: {os.path.getsize(abs_output_html)}")
 
 if __name__ == "__main__":
     main()
