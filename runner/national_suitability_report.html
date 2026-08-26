@@ -1036,17 +1036,18 @@ TIER 3: CONSTRAINED     High grid congestion region or reliant on potable water 
 <hr />
 <h2>3. GeoLibre Open-Source AI Spatial Platform Integration</h2>
 <p>To allow the public and decision-makers to explore these spatial models interactively, <code>hunter_spatial_crafter</code> will integrate directly with <a href="https://github.com/opengeos/GeoLibre">opengeos/GeoLibre</a>.</p>
-<h3>A. Cloud Architecture on Google Cloud Platform (GCP)</h3>
+<h3>A. Cloud Architecture on Amazon Web Services (AWS)</h3>
 <pre><code>┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                GOOGLE CLOUD PLATFORM (GCP)                              │
+│                            AMAZON WEB SERVICES (AWS us-west-2)                          │
 │                                                                                         │
 │   ┌────────────────────────────────┐                 ┌──────────────────────────────┐   │
-│   │ Google Cloud Storage (GCS)     │                 │ GCP Cloud Run (Serverless)   │   │
+│   │ Amazon S3 (+ CloudFront CDN)   │                 │ AWS Lambda (Function URL)    │   │
 │   │                                │                 │                              │   │
 │   │ • GeoParquet Suitability Data  │◄────────────────┤ • FastAPI Spatial AI Proxy   │   │
-│   │ • PMTiles Vector Layers        │ (Direct HTTP)   │ • Scale-to-Zero Container    │   │
-│   │ • Static GeoLibre App UI       │                 │ • Gemini &amp; OpenRouter Client │   │
+│   │ • PMTiles Vector Layers        │ (Direct HTTP)   │ • Scale-to-Zero, pay-per-ms  │   │
+│   │ • Static GeoLibre App UI       │  Range requests │ • Bedrock &amp; OpenRouter Client│   │
 │   └───────────────▲────────────────┘                 └──────────────▲───────────────┘   │
+│                   │  same bucket the Wherobots Sedona job already writes to             │
 └───────────────────┼─────────────────────────────────────────────────┼───────────────────┘
                     │                                                 │
                     │ static assets &amp; byte-range queries              │ Prompts &amp; AI SQL
@@ -1068,29 +1069,32 @@ TIER 3: CONSTRAINED     High grid congestion region or reliant on potable water 
 <p>Rather than maintaining separate file servers or copying data onto local web server disk storage, GeoLibre and Wherobots will share the exact same cloud-native dataset repository:</p>
 <ol>
 <li><strong>Zero-Duplication Central Data Layer</strong>:</li>
-<li>Wherobots Cloud (Apache Sedona Spark) will output suitability modeling layers directly into a central Google Cloud Storage (GCS) / S3 bucket as <strong>GeoParquet</strong> and <strong>PMTiles</strong>.</li>
+<li>Wherobots Cloud (Apache Sedona Spark) already writes to Amazon S3 in <code>us-west-2</code> — the Havasu/Iceberg tables for this project live at <code>s3://wherobots-cloud-us-west-2/org_ltq5l3obgb/fgsdb/</code>. Staying on S3 means the Sedona job writes <strong>GeoParquet</strong> and <strong>PMTiles</strong> into the same account and region GeoLibre reads from.</li>
 <li>
-<p>GeoLibre will query these exact same files in GCS without needing any dataset conversion or server duplication.</p>
+<p>GeoLibre will query those exact files in place. No cross-cloud copy step, no egress charge to move results to a second provider, and no second copy to keep in sync — which is what "zero duplication" has to mean in practice.</p>
 </li>
 <li>
 <p><strong>HTTP Range-Request Querying</strong>:</p>
 </li>
-<li>GeoLibre’s in-browser DuckDB-WASM engine will fetch only the required byte ranges and spatial row groups via HTTP range requests (<code>read_parquet('https://storage.googleapis.com/.../datacenter_candidates.parquet')</code>).</li>
+<li>GeoLibre’s in-browser DuckDB-WASM engine will fetch only the required byte ranges and spatial row groups via HTTP range requests (<code>read_parquet('https://&lt;bucket&gt;.s3.us-west-2.amazonaws.com/.../datacenter_candidates.parquet')</code>), or through a CloudFront distribution in front of the bucket.</li>
+<li>S3 supports HTTP range requests natively, so this works against the object directly; CloudFront adds edge caching and lets you serve the public site from a custom domain over HTTPS.</li>
+<li>This eliminates the need to download large files to the client or maintain expensive local web server NVMe storage drives.</li>
 <li>
-<p>This eliminates the need to download large files to the client or maintain expensive local web server NVMe storage drives.</p>
+<p><strong>CORS note</strong>: the bucket (or distribution) needs a CORS policy exposing <code>Accept-Ranges</code>, <code>Content-Range</code>, and <code>Content-Length</code> for DuckDB-WASM range reads to work from a browser origin.</p>
 </li>
 <li>
 <p><strong>Cloud-Native Storage Tradeoff Analysis</strong>:</p>
 </li>
 </ol>
-<pre><code>Architecture Model         Data Sync / Duplication    Storage &amp; Server Cost        Scalability
----------------------------------------------------------------------------------------------------------
-Shared Cloud Storage (GCS) Zero Duplication (Unified)  Near-Zero (~$0.02/GB/mo)     Infinite Public Scale
-Local Web Server Storage   High Duplication Needed     Expensive Server Disks       Constrained by VM I/O
+<pre><code>Architecture Model          Data Sync / Duplication      Storage &amp; Server Cost        Scalability
+-----------------------------------------------------------------------------------------------------------
+Shared Cloud Storage (S3)   Zero Duplication (Unified)   Near-Zero (~$0.023/GB/mo)    Infinite Public Scale
+Cross-Cloud (S3 -&gt; GCS)     Copy + Sync Required         Storage x2 + Egress Fees     Sync Lag on Every Run
+Local Web Server Storage    High Duplication Needed      Expensive Server Disks       Constrained by VM I/O
 </code></pre>
 <h3>C. Free Tier &amp; OpenRouter Bring-Your-Own-Key (BYOK) Model</h3>
 <p>Inspired by <a href="https://github.com/GetBack2Basics/LivePersonaCrafter">GetBack2Basics/LivePersonaCrafter</a>, GeoLibre will provide a dual-model LLM access tier:
-- <strong>Free Default Tier</strong>: Powered by Google Cloud Gemini API (hosted on Cloud Run), allowing the public to ask natural language questions for free without creating accounts.
+- <strong>Free Default Tier</strong>: Powered by Amazon Bedrock (hosted behind an AWS Lambda Function URL), allowing the public to ask natural language questions for free without creating accounts. Bedrock keeps the model call inside the same AWS account as the data, so no credential or payload crosses a provider boundary.
 - <strong>OpenRouter BYOK Tier</strong>: Users will be able to enter their own OpenRouter API key directly in the GeoLibre settings drawer to unlock premium or specialized models (e.g., Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, Llama 3) for advanced spatial reasoning.</p>
 <h3>D. Planned Conversational AI Queries ("Ask AI")</h3>
 <ul>
