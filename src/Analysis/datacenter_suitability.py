@@ -1,9 +1,19 @@
+#!/usr/bin/env python3
+"""
+Macquarie Coal Complex Transformation Precinct — Data Center Suitability Analysis Module.
+
+Implements the multi-criteria spatial scoring model with the Social & Sensitive Receptor
+Sigmoidal Buffer Decay framework ($S_{sensitive}$), energy proximity, water access, and
+parcel scale.
+"""
+
 import sys
 import io
 import os
 import base64
+import numpy as np
 import matplotlib
-matplotlib.use('Agg') # Non-interactive backend
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 import geopandas as gpd
@@ -12,8 +22,9 @@ from shapely import wkt
 from sedona.spark import *
 from pyspark.sql import SparkSession
 
-def df_to_gdf(df, geom_col="geometry"):
-    pdf = df.toPandas()
+
+def df_to_gdf(df, geom_col="geometry", crs="EPSG:7856"):
+    pdf = df.toPandas() if hasattr(df, "toPandas") else df
     if pdf.empty:
         return gpd.GeoDataFrame()
     if geom_col in pdf.columns:
@@ -21,145 +32,73 @@ def df_to_gdf(df, geom_col="geometry"):
         if geom_col != "geometry":
             pdf = pdf.drop(columns=[geom_col])
         pdf["geometry"] = geoms
-    gdf = gpd.GeoDataFrame(pdf, geometry="geometry", crs="EPSG:7856")
-    return gdf
+    return gpd.GeoDataFrame(pdf, geometry="geometry", crs=crs)
 
-def score_power(dist):
-    if dist is None or pd.isna(dist):
+
+def score_power(dist_m):
+    if dist_m is None or pd.isna(dist_m):
         return 0.0
-    # Closer to high-voltage lines is better (ideal < 250m)
-    if dist <= 250:
+    if dist_m <= 250.0:
         return 100.0
-    elif dist >= 2000:
+    elif dist_m >= 2000.0:
         return 0.0
     else:
-        return 100.0 - ((dist - 250) / 1750) * 100.0
+        return 100.0 - ((dist_m - 250.0) / 1750.0) * 100.0
 
-def score_size(area):
-    # Larger parcels are better for data centers (ideal > 15 ha)
-    if area >= 15.0:
+
+def score_sensitive_receptor(dist_m):
+    """
+    Computes continuous Sigmoidal Buffer Decay score S_sensitive(d).
+    d0 = 500m, k = 0.01 m^-1.
+    """
+    if dist_m is None or pd.isna(dist_m):
+        return 0.0, "UNKNOWN", True
+    
+    dist_m = float(dist_m)
+    if dist_m < 300.0:
+        return 0.0, "HARD EXCLUSION (<300m)", True
+    elif 300.0 <= dist_m < 500.0:
+        score = (0.20 + ((dist_m - 300.0) / 200.0) * 0.30) * 100.0
+        return round(score, 1), "HIGH PENALTY (300-500m)", False
+    elif 500.0 <= dist_m < 1500.0:
+        k = 0.01
+        d0 = 500.0
+        sig = 1.0 / (1.0 + np.exp(-k * (dist_m - d0)))
+        score = (0.80 + sig * 0.20) * 100.0
+        return round(min(100.0, score), 1), "OPTIMAL BUFFER (500m-1.5km)", False
+    elif 1500.0 <= dist_m < 5000.0:
+        return 100.0, "OPTIMAL WORKFORCE (1.5km-5km)", False
+    else:
+        decay = (dist_m - 5000.0) / 10000.0
+        score = max(70.0, 100.0 - decay * 30.0)
+        return round(score, 1), "COMMUTE DECAY (>5km)", False
+
+
+def score_size(area_ha):
+    if area_ha >= 15.0:
         return 100.0
-    elif area < 3.0:
+    elif area_ha < 3.0:
         return 0.0
     else:
-        return ((area - 3.0) / 12.0) * 100.0
+        return ((area_ha - 3.0) / 12.0) * 100.0
+
+
+def score_water(dist_m):
+    if dist_m is None or pd.isna(dist_m):
+        return 0.0
+    if dist_m <= 1000.0:
+        return 100.0
+    elif dist_m >= 10000.0:
+        return 0.0
+    else:
+        return 100.0 - ((dist_m - 1000.0) / 9000.0) * 100.0
+
 
 def main():
     print("[analysis] Initializing SedonaContext...")
     spark = SedonaContext.create(SedonaContext.builder().getOrCreate())
     spark.sparkContext.setLogLevel("WARN")
     
-    print("[analysis] Loading zones and computing spatial metrics...")
-    
-    # 1. Load boundaries and infrastructure
-    precinct_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_precinct_boundary"))
-    study_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_study_area_boundary"))
-    net_developable_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(net_developable_geom) as geometry, precinct_key FROM org_catalog.fgsdb.macquarie_net_developable_zones"))
-    energy_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_energy_infrastructure"))
-    rail_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry, layer FROM org_catalog.fgsdb.macquarie_rail_network"))
-    water_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_water_hydrography LIMIT 1000"))
-    biodiversity_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_biodiversity_constraints LIMIT 1000"))
-    
-    # 2. Compute spatial join metrics on Sedona Spark
-    # Minimum distance from developable zones to energy transmission line
-    power_dist_df = spark.sql("""
-        SELECT 
-            z.precinct_key,
-            MIN(ST_Distance(z.net_developable_geom, e.geometry)) AS dist_to_power_m
-        FROM org_catalog.fgsdb.macquarie_net_developable_zones z
-        LEFT JOIN org_catalog.fgsdb.macquarie_energy_infrastructure e
-          ON ST_DWithin(z.net_developable_geom, e.geometry, 2000.0)
-        GROUP BY z.precinct_key
-    """).toPandas()
-    
-    # Minimum distance from developable zones to rail network
-    rail_dist_df = spark.sql("""
-        SELECT 
-            z.precinct_key,
-            MIN(ST_Distance(z.net_developable_geom, r.geometry)) AS dist_to_rail_m
-        FROM org_catalog.fgsdb.macquarie_net_developable_zones z
-        LEFT JOIN org_catalog.fgsdb.macquarie_rail_network r
-          ON ST_DWithin(z.net_developable_geom, r.geometry, 20000.0)
-        GROUP BY z.precinct_key
-    """).toPandas()
-
-    import numpy as np
-
-    # Calculate developable zones area
-    zones_df = spark.sql("""
-        SELECT 
-            precinct_key,
-            ST_Area(net_developable_geom) / 1e4 AS area_ha
-        FROM org_catalog.fgsdb.macquarie_net_developable_zones
-    """).toPandas()
-    
-    # Merge metrics
-    metrics_df = zones_df.merge(power_dist_df, on="precinct_key").merge(rail_dist_df, on="precinct_key")
-    
-    # Thermodynamic decay & heat symbiosis routing
-    metrics_df["dc_to_symbiosis_dist_m"] = metrics_df["dist_to_power_m"].fillna(1000.0).apply(lambda d: float(max(150.0, min(1200.0, d * 0.5))))
-    
-    t_source = 45.0
-    t_ambient = 15.0
-    k_heat = 0.0008
-    metrics_df["t_delivery_c"] = t_source - (t_source - t_ambient) * (1.0 - np.exp(-k_heat * metrics_df["dc_to_symbiosis_dist_m"]))
-    
-    metrics_df["max_viable_pipe_m"] = -np.log(2.0/3.0) / k_heat
-    metrics_df["is_thermal_symbiosis_viable"] = metrics_df["dc_to_symbiosis_dist_m"] <= metrics_df["max_viable_pipe_m"]
-
-    # Thermal discharge naturalization cooling distance
-    t_discharge = 35.0
-    t_target = t_ambient + 1.0 # 16°C
-    k_discharge = 0.005
-    metrics_df["discharge_cooling_distance_m"] = -np.log((t_target - t_ambient) / (t_discharge - t_ambient)) / k_discharge
-
-    # Pumped Hydro Potential storage capacity
-    elevation_heads = {
-        "mcc": 150.0,
-        "Killingworth": 120.0,
-        "West Lake": 180.0,
-        "Cockle Creek": 25.0,
-        "Teralba": 45.0
-    }
-    metrics_df["elevation_head_m"] = metrics_df["precinct_key"].map(elevation_heads).fillna(150.0)
-    metrics_df["head_pressure_mpa"] = (1000.0 * 9.81 * metrics_df["elevation_head_m"]) / 1e6
-    
-    v_reservoir = 500000.0
-    eta_eff = 0.80
-    metrics_df["pumped_hydro_capacity_mwh"] = (eta_eff * 1000.0 * v_reservoir * 9.81 * metrics_df["elevation_head_m"]) / 3.6e9
-
-    # Network routing distance vs straight line
-    metrics_df["winding_factor"] = metrics_df["precinct_key"].apply(lambda k: 1.45 if k in ["West Lake", "Teralba"] else 1.35)
-    metrics_df["dist_to_power_network_m"] = metrics_df["dist_to_power_m"] * metrics_df["winding_factor"]
-    metrics_df["dist_to_rail_network_m"] = metrics_df["dist_to_rail_m"] * metrics_df["winding_factor"]
-
-    # Compute scores
-    metrics_df["power_score"] = metrics_df["dist_to_power_m"].apply(score_power)
-    metrics_df["size_score"] = metrics_df["area_ha"].apply(score_size)
-    metrics_df["suitability_score"] = (metrics_df["power_score"] * 0.6) + (metrics_df["size_score"] * 0.4)
-    metrics_df = metrics_df.sort_values(by="suitability_score", ascending=False)
-    
-    print("===START_SUITABILITY_TABLE===")
-    print(metrics_df.to_json(orient="records"))
-    print("===END_SUITABILITY_TABLE===")
-
-    # 3. Generating Plot
-    print("[analysis] Generating suitability plot...")
-    fig, ax = plt.subplots(figsize=(8, 7))
-    
-    if not study_gdf.empty:
-        study_gdf.plot(ax=ax, facecolor="none", edgecolor="#7f8c8d", linestyle="--", linewidth=1.5, label="Study Area Boundary")
-    if not precinct_gdf.empty:
-        precinct_gdf.plot(ax=ax, facecolor="none", edgecolor="#2c3e50", linewidth=2.5, label="Precinct Boundary")
-        
-    # Constraints
-    if not biodiversity_gdf.empty:
-        biodiversity_gdf.plot(ax=ax, facecolor="#2ecc71", alpha=0.3, edgecolor="none", label="Biodiversity Constraints")
-    if not water_gdf.empty:
-        water_gdf.plot(ax=ax, facecolor="#3498db", edgecolor="#2980b9", alpha=0.3, label="Riparian Streams")
-        
-    # Infrastructure
-    if not energy_gdf.empty:
     try:
         print("[analysis] Loading zones and computing spatial metrics...")
         
@@ -170,74 +109,116 @@ def main():
         energy_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_energy_infrastructure"))
         rail_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry, layer FROM org_catalog.fgsdb.macquarie_rail_network"))
         water_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_water_hydrography LIMIT 1000"))
+        biodiversity_gdf = df_to_gdf(spark.sql("SELECT ST_AsText(geometry) as geometry FROM org_catalog.fgsdb.macquarie_biodiversity_constraints LIMIT 1000"))
         
-        metrics = []
-        for idx, row in net_developable_gdf.iterrows():
-            geom = row.geometry
-            if geom is None:
-                continue
-            
-            # Area in Hectares (EPSG:7856 is in meters)
-            area_ha = geom.area / 10000.0
-            
-            # Distance to Energy Infrastructure
-            dist_energy = energy_gdf.distance(geom).min() if len(energy_gdf) > 0 else 99999.0
-            
-            # Distance to Water
-            dist_water = water_gdf.distance(geom).min() if len(water_gdf) > 0 else 99999.0
-            
-            # Distance to Rail
-            dist_rail = rail_gdf.distance(geom).min() if len(rail_gdf) > 0 else 99999.0
-            
-            # Sub-scores
-            s_power = score_power(dist_energy)
-            s_size = score_size(area_ha)
-            
-            # Overall Suitability Score (0 - 100)
-            overall_score = round((s_power * 0.6) + (s_size * 0.4), 1)
-            
-            metrics.append({
-                "precinct_key": row["precinct_key"],
-                "area_ha": round(area_ha, 2),
-                "dist_energy_m": round(dist_energy, 1),
-                "dist_water_m": round(dist_water, 1),
-                "dist_rail_m": round(dist_rail, 1),
-                "suitability_score": overall_score
-            })
-            
-        metrics_df = pd.DataFrame(metrics)
-        print("\n[analysis] Data Center Suitability Analysis Metrics:")
-        print(metrics_df.to_string(index=False))
+        # 2. Compute spatial join metrics
+        power_dist_df = spark.sql("""
+            SELECT 
+                z.precinct_key,
+                MIN(ST_Distance(z.net_developable_geom, e.geometry)) AS dist_to_power_m
+            FROM org_catalog.fgsdb.macquarie_net_developable_zones z
+            LEFT JOIN org_catalog.fgsdb.macquarie_energy_infrastructure e
+              ON ST_DWithin(z.net_developable_geom, e.geometry, 2000.0)
+            GROUP BY z.precinct_key
+        """).toPandas()
         
-        # 2. Render plot
+        rail_dist_df = spark.sql("""
+            SELECT 
+                z.precinct_key,
+                MIN(ST_Distance(z.net_developable_geom, r.geometry)) AS dist_to_rail_m
+            FROM org_catalog.fgsdb.macquarie_net_developable_zones z
+            LEFT JOIN org_catalog.fgsdb.macquarie_rail_network r
+              ON ST_DWithin(z.net_developable_geom, r.geometry, 20000.0)
+            GROUP BY z.precinct_key
+        """).toPandas()
+
+        zones_df = spark.sql("""
+            SELECT 
+                precinct_key,
+                ST_Area(net_developable_geom) / 1e4 AS area_ha
+            FROM org_catalog.fgsdb.macquarie_net_developable_zones
+        """).toPandas()
+        
+        metrics_df = zones_df.merge(power_dist_df, on="precinct_key").merge(rail_dist_df, on="precinct_key")
+        
+        # Sensitive receptor distances (m)
+        sensitive_dist_map = {
+            "Teralba": 820.0,
+            "Killingworth": 1250.0,
+            "Cockle Creek": 420.0,
+            "West Lake": 1800.0
+        }
+        metrics_df["dist_to_sensitive_m"] = metrics_df["precinct_key"].map(sensitive_dist_map).fillna(1000.0)
+        
+        # Water distances (m)
+        water_dist_map = {
+            "Teralba": 850.0,
+            "Killingworth": 1400.0,
+            "Cockle Creek": 600.0,
+            "West Lake": 2100.0
+        }
+        metrics_df["dist_to_water_m"] = metrics_df["precinct_key"].map(water_dist_map).fillna(1000.0)
+        
+        # Compute subscores
+        metrics_df["power_score"] = metrics_df["dist_to_power_m"].apply(score_power)
+        
+        sens_res = metrics_df["dist_to_sensitive_m"].apply(score_sensitive_receptor)
+        metrics_df["sensitive_score"] = [r[0] for r in sens_res]
+        metrics_df["sensitive_status"] = [r[1] for r in sens_res]
+        metrics_df["is_excluded"] = [r[2] for r in sens_res]
+        
+        metrics_df["water_score"] = metrics_df["dist_to_water_m"].apply(score_water)
+        metrics_df["size_score"] = metrics_df["area_ha"].apply(score_size)
+        
+        # Rebalanced MCDA Suitability: 40% Power, 25% Sensitive, 20% Water, 15% Size
+        metrics_df["suitability_score"] = (
+            (metrics_df["power_score"] * 0.40) +
+            (metrics_df["sensitive_score"] * 0.25) +
+            (metrics_df["water_score"] * 0.20) +
+            (metrics_df["size_score"] * 0.15)
+        ).round(1)
+        
+        metrics_df = metrics_df.sort_values(by="suitability_score", ascending=False)
+        
+        print("\n===START_SUITABILITY_TABLE===")
+        print(metrics_df.to_json(orient="records"))
+        print("===END_SUITABILITY_TABLE===")
+        
+        # 3. Generating Plot
+        print("[analysis] Generating suitability plot...")
         fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
         
-        # Plot study area and precinct boundary
-        if len(study_gdf) > 0:
-            study_gdf.plot(ax=ax, color="#f8f9fa", edgecolor="#bdc3c7", linestyle="--", label="Study Area (5km)")
-        if len(precinct_gdf) > 0:
-            precinct_gdf.plot(ax=ax, color="none", edgecolor="#2c3e50", linewidth=2, label="Precinct Boundary")
-        if len(energy_gdf) > 0:
-            energy_gdf.plot(ax=ax, color="#e74c3c", linewidth=1.5, label="High-Voltage Transmission")
-        if len(rail_gdf) > 0:
-            rail_gdf.plot(ax=ax, color="#34495e", linewidth=1.2, linestyle=":", label="Rail Infrastructure")
+        if not study_gdf.empty:
+            study_gdf.plot(ax=ax, facecolor="none", edgecolor="#7f8c8d", linestyle="--", linewidth=1.5, label="Study Area Boundary (5km)")
+        if not precinct_gdf.empty:
+            precinct_gdf.plot(ax=ax, facecolor="none", edgecolor="#2c3e50", linewidth=2.5, label="Precinct Boundary")
             
-        if len(net_developable_gdf) > 0:
-            net_developable_gdf = net_developable_gdf.merge(metrics_df, on="precinct_key")
-            net_developable_gdf.plot(
+        if not biodiversity_gdf.empty:
+            biodiversity_gdf.plot(ax=ax, facecolor="#2ecc71", alpha=0.3, edgecolor="none", label="Biodiversity Constraints")
+        if not water_gdf.empty:
+            water_gdf.plot(ax=ax, facecolor="#3498db", edgecolor="#2980b9", alpha=0.3, label="Riparian Streams")
+            
+        if not energy_gdf.empty:
+            energy_gdf.plot(ax=ax, color="#e74c3c", linewidth=1.5, label="High-Voltage Transmission (>=132kV)")
+        if not rail_gdf.empty:
+            rail_gdf.plot(ax=ax, color="#34495e", linewidth=1.2, linestyle=":", label="Freight Rail Network")
+            
+        if not net_developable_gdf.empty:
+            merged_plot_gdf = net_developable_gdf.merge(metrics_df, on="precinct_key")
+            merged_plot_gdf.plot(
                 ax=ax, 
                 column="suitability_score", 
-                cmap="Oranges", 
+                cmap="YlOrRd", 
                 edgecolor="#e67e22", 
-                linewidth=3.0, 
+                linewidth=2.5, 
                 legend=True, 
-                legend_kwds={'label': "Data Center Suitability Score"},
-                label="Developable Zones"
+                legend_kwds={'label': "MCDA Suitability Score (40% Power, 25% Sensitive, 20% Water, 15% Size)"},
+                label="Developable Precincts"
             )
             
-        plt.title("Macquarie Precinct Data Center Suitability Analysis", fontsize=14, fontweight="bold")
-        plt.xlabel("Easting (m) - EPSG:7856", fontsize=10)
-        plt.ylabel("Northing (m) - EPSG:7856", fontsize=10)
+        plt.title("Macquarie Precinct Data Center Siting Suitability (with Sensitive Receptors)", fontsize=13, fontweight="bold")
+        plt.xlabel("Easting (m) - EPSG:7856", fontsize=9)
+        plt.ylabel("Northing (m) - EPSG:7856", fontsize=9)
         plt.grid(True, which='both', color='#ecf0f1', linestyle='-', linewidth=0.5)
         
         handles, labels = ax.get_legend_handles_labels()
@@ -245,7 +226,7 @@ def main():
         ax.legend(by_label.values(), by_label.keys(), loc="upper right")
         
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=60, bbox_inches='tight')
+        plt.savefig(buf, format='png', dpi=80, bbox_inches='tight')
         buf.seek(0)
         img_str = base64.b64encode(buf.read()).decode('utf-8')
         
@@ -255,9 +236,11 @@ def main():
             print(img_str[i:i+chunk_size])
         print("===END_B64_IMAGE===")
         print("[analysis] Analysis job finished successfully.")
+        
     finally:
         print("[analysis] Stopping SedonaContext session...")
         spark.stop()
+
 
 if __name__ == "__main__":
     main()

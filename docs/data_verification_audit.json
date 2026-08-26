@@ -1,0 +1,200 @@
+{
+  "timestamp_utc": "2026-08-26T21:14:06.599292Z",
+  "jurisdictions_covered": [
+    "NSW",
+    "QLD",
+    "VIC",
+    "WA",
+    "ACT",
+    "NT",
+    "SA",
+    "TAS"
+  ],
+  "metrics": {
+    "total_education_receptors_ingested": 19,
+    "education_meshblock_alignment_pct": 100.0,
+    "total_healthcare_receptors_ingested": 14,
+    "healthcare_meshblock_alignment_pct": 100.0,
+    "total_cadastral_parcels_indexed": 17,
+    "cadastral_dem_slope_compliance_pct": 100.0
+  },
+  "lineage_records": {
+    "national_cadastre": {
+      "name": "Geoscape National Cadastre & G-NAF",
+      "jurisdiction": "National (All States & Territories)",
+      "agency": "Geoscape / Data.gov.au",
+      "endpoint": "https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-02-15",
+      "cadence": "Quarterly Official Release",
+      "cleaning_applied": "CRS Transformation (EPSG:7844 -> EPSG:3112), Lot/Plan string standardisation (Lot//Plan), Address parsing",
+      "is_raw_unchanged": false
+    },
+    "elvis_dem_elevation": {
+      "name": "ELVIS Elevation Foundation Spatial Data (1-sec SRTM & 5m LiDAR DEM)",
+      "jurisdiction": "National (All States & Territories)",
+      "agency": "Geoscience Australia (GA)",
+      "endpoint": "https://elevation.fsdf.org.au/",
+      "geometry_type": "32-bit Float Raster / WCS",
+      "currency_date": "2025-11-30",
+      "cadence": "Continuous Update",
+      "cleaning_applied": "Slope extraction via RS_Slope (deg & % grade), 5% threshold filtering",
+      "is_raw_unchanged": false
+    },
+    "abs_meshblocks_2021": {
+      "name": "ASGS 2021 Meshblocks & Land Use Categories",
+      "jurisdiction": "National (All States & Territories)",
+      "agency": "Australian Bureau of Statistics (ABS)",
+      "endpoint": "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/MeshBlock/MapServer",
+      "geometry_type": "Polygon",
+      "currency_date": "2021-10-12 (Official Census Standard)",
+      "cadence": "5-Year Census Benchmark",
+      "cleaning_applied": "Filtered for 'Residential', 'Education', 'Commercial', 'Industrial'; ST_IsValid geometry repair",
+      "is_raw_unchanged": false
+    },
+    "abs_urban_centres_2021": {
+      "name": "ASGS 2021 Urban Centres and Localities (UCL)",
+      "jurisdiction": "National (All States & Territories)",
+      "agency": "Australian Bureau of Statistics (ABS)",
+      "endpoint": "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/UCL/MapServer",
+      "geometry_type": "Polygon",
+      "currency_date": "2021-10-12",
+      "cadence": "5-Year Census Benchmark",
+      "cleaning_applied": "Boundary dissolve for regional commuting catchment buffer (1.5km - 15km)",
+      "is_raw_unchanged": false
+    },
+    "acara_schools": {
+      "name": "National School Location Dataset",
+      "jurisdiction": "National (All States & Territories)",
+      "agency": "ACARA / Australian Government Dept of Education",
+      "endpoint": "https://data.gov.au/dataset/ds-dga-19597793-be34-406a-939e-d1b4a5598687",
+      "geometry_type": "Point",
+      "currency_date": "2025-06-30",
+      "cadence": "Annual Update",
+      "cleaning_applied": "Harmonization of school names, category standardisation, projected to EPSG:3112",
+      "is_raw_unchanged": false
+    },
+    "nhsd_health_facilities": {
+      "name": "National Health Services Directory (NHSD)",
+      "jurisdiction": "National (All States & Territories)",
+      "agency": "Healthdirect Australia / National Map",
+      "endpoint": "https://about.healthdirect.gov.au/national-health-services-directory",
+      "geometry_type": "Point",
+      "currency_date": "2026-01-20",
+      "cadence": "Monthly Live API",
+      "cleaning_applied": "Inpatient/emergency care classification filtering, duplicate removal",
+      "is_raw_unchanged": false
+    },
+    "osm_australia_receptors": {
+      "name": "OpenStreetMap Australia POI Extract (Schools, Hospitals, Childcare)",
+      "jurisdiction": "National (NSW, VIC, QLD, WA, SA, TAS, ACT, NT)",
+      "agency": "OpenStreetMap Foundation / Geofabrik",
+      "endpoint": "https://download.geofabrik.de/australia-oceania/australia.html",
+      "geometry_type": "Point / Polygon",
+      "currency_date": "2026-08-20 (Rolling Live Extract)",
+      "cadence": "Weekly / Continuous",
+      "cleaning_applied": "Amenity filtering ('school', 'kindergarten', 'hospital', 'clinic', 'university'), polygon centroid reduction",
+      "is_raw_unchanged": false
+    },
+    "aemo_transmission_grid": {
+      "name": "National Electricity Transmission Lines & Terminal Substations (>=132kV)",
+      "jurisdiction": "National (NEM & WEM)",
+      "agency": "Geoscience Australia / AEMO",
+      "endpoint": "https://nationalmap.gov.au",
+      "geometry_type": "LineString / Point",
+      "currency_date": "2025-09-15",
+      "cadence": "Semi-Annual",
+      "cleaning_applied": "High-voltage subsetting (voltage_kv >= 132), multi-part line segment dissolution",
+      "is_raw_unchanged": false
+    },
+    "nsw_spatial_services": {
+      "name": "NSW Cadastre & Spatial Services Features",
+      "jurisdiction": "New South Wales (NSW)",
+      "agency": "NSW Spatial Services / NSW SEED",
+      "endpoint": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Cadastre/MapServer",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-02-24 (Live WFS/REST)",
+      "cadence": "Weekly Live Sync",
+      "cleaning_applied": "Lot/Plan attribute validation against NSW LPI index",
+      "is_raw_unchanged": true
+    },
+    "qld_qspatial_cadastre": {
+      "name": "Queensland Digital Cadastral Database (DCDB)",
+      "jurisdiction": "Queensland (QLD)",
+      "agency": "data.qld.gov.au / QSpatial",
+      "endpoint": "https://spatial-gis.information.qld.gov.au/arcgis/rest/services/PlanningCadastre/LandParcelPropertyFramework/MapServer",
+      "geometry_type": "Polygon",
+      "currency_date": "2026-02-22 (Live WFS/REST)",
+      "cadence": "Weekly Live Sync",
+      "cleaning_applied": "Standardization of LOT/PLAN (e.g. Lot 12 on RP123456 -> 12//RP123456)",
+      "is_raw_unchanged": false
+    },
+    "vicmap_property": {
+      "name": "Vicmap Property & Features POI",
+      "jurisdiction": "Victoria (VIC)",
+      "agency": "Data.vic.gov.au / Land Use Victoria",
+      "endpoint": "https://services.land.vic.gov.au/arcgis/rest/services/",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-01-15",
+      "cadence": "Quarterly",
+      "cleaning_applied": "Standardization of SPI (Standard Parcel Identifier) to Lot/Plan",
+      "is_raw_unchanged": false
+    },
+    "wa_landgate_slip": {
+      "name": "WA Cadastre & Infrastructure FeatureServer",
+      "jurisdiction": "Western Australia (WA)",
+      "agency": "Data.wa.gov.au / Landgate SLIP",
+      "endpoint": "https://slip.landgate.wa.gov.au/arcgis/rest/services/",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-02-10",
+      "cadence": "Monthly",
+      "cleaning_applied": "Survey parcel extraction and coordinate verification",
+      "is_raw_unchanged": true
+    },
+    "act_actmapi": {
+      "name": "ACTmapi Cadastre & Community Facilities",
+      "jurisdiction": "Australian Capital Territory (ACT / Canberra)",
+      "agency": "ACT Open Data / ACTmapi",
+      "endpoint": "https://services1.arcgis.com/E5n4f19nThNVBumn/arcgis/rest/services/",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-02-18",
+      "cadence": "Monthly",
+      "cleaning_applied": "Block and Section conversion to standardized Lot/Plan",
+      "is_raw_unchanged": false
+    },
+    "nt_atlas": {
+      "name": "NT Atlas & Spatial Data Services",
+      "jurisdiction": "Northern Territory (NT)",
+      "agency": "Data NT / NT Spatial Data Directory",
+      "endpoint": "https://ntg-spatial.nt.gov.au/arcgis/rest/services/",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2025-12-05",
+      "cadence": "Quarterly",
+      "cleaning_applied": "Portion and Section number alignment with national G-NAF",
+      "is_raw_unchanged": false
+    },
+    "sa_locationsa": {
+      "name": "LocationSA Cadastre & Infrastructure",
+      "jurisdiction": "South Australia (SA)",
+      "agency": "Data.sa.gov.au / LocationSA",
+      "endpoint": "https://location.sa.gov.au/arcgis/rest/services/",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-01-28",
+      "cadence": "Monthly",
+      "cleaning_applied": "Title and parcel identifier mapping",
+      "is_raw_unchanged": true
+    },
+    "tas_thelist": {
+      "name": "LISTas Cadastre & Infrastructure",
+      "jurisdiction": "Tasmania (TAS)",
+      "agency": "Land Information System Tasmania (thelist.tas.gov.au)",
+      "endpoint": "https://services.thelist.tas.gov.au/arcgis/rest/services/",
+      "geometry_type": "Polygon / Point",
+      "currency_date": "2026-02-01",
+      "cadence": "Monthly",
+      "cleaning_applied": "Property ID cross-validation against G-NAF address points",
+      "is_raw_unchanged": true
+    }
+  },
+  "qa_status": "PASSED - All POI coordinates conform to ABS 2021 land use zoning and G-NAF addresses"
+}

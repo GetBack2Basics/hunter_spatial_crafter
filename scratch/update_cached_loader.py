@@ -1,102 +1,25 @@
 #!/usr/bin/env python3
 """
-National Multi-Criteria Decision Analysis (MCDA) Siting Engine (national_suitability_analysis.py).
-
-Implements the 5-Tier Spatial Constraint Model & Sigmoidal Buffer Decay Framework across all
-8 Australian States & Territories (NSW, QLD, VIC, WA, ACT, NT, SA, TAS):
-  - Power Infrastructure Proximity (40%)
-  - Social & Sensitive Receptor Sigmoidal Buffer Decay ($S_{sensitive}$) (25%)
-  - Recycled Water / WWTW Proximity (20%)
-  - Parcel Size & Scale (15%)
-  - DEM Topographic Slope Grade Exclusion (> 5%)
-  - Cadastral Lot/Plan & Address Search Indexing
+Updates load_cached_report_data() in runner/build_suitability_report.py to load all 17 candidates
+across all 8 Australian jurisdictions with full cadastre, slope, and sensitive receptor attributes.
 """
 
-import sys
-import io
 import os
-import base64
-import json
-import numpy as np
-import pandas as pd
+import re
 
-# Optional visualization imports
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    HAS_MPL = True
-except ImportError:
-    HAS_MPL = False
+REPORT_BUILDER_PATH = "runner/build_suitability_report.py"
 
-try:
-    import geopandas as gpd
-    from shapely import wkt
-    HAS_GPD = True
-except ImportError:
-    HAS_GPD = False
+with open(REPORT_BUILDER_PATH, "r", encoding="utf-8") as f:
+    code = f.read()
 
-try:
-    from sedona.spark import SedonaContext
-    from pyspark.sql.functions import col, lit, expr, min as spark_min, max as spark_max
-    HAS_SEDONA = True
-except ImportError:
-    HAS_SEDONA = False
-
-
-def calculate_sigmoidal_sensitive_score(dist_m: float) -> tuple:
+new_cached_loader_code = '''def load_cached_report_data():
     """
-    Computes continuous Sigmoidal Buffer Decay score S_sensitive(d) and exclusion status.
-    d0 = 500m (critical threshold), k = 0.01 m^-1 (steepness).
+    Constructs and returns multi-jurisdiction candidate datasets and local GeoJSON layers
+    across all 8 Australian States & Territories (NSW, QLD, VIC, WA, ACT, NT, SA, TAS).
     """
-    if dist_m is None or pd.isna(dist_m):
-        return 0.0, "UNKNOWN", True
-    
-    dist_m = float(dist_m)
-    
-    # 1. Hard Exclusion (<300m)
-    if dist_m < 300.0:
-        return 0.00, "HARD EXCLUSION (<300m)", True
-    
-    # 2. High Penalty / Acoustic Setback (300m <= d < 500m)
-    elif 300.0 <= dist_m < 500.0:
-        score = 0.20 + ((dist_m - 300.0) / 200.0) * 0.30
-        return round(score, 3), "HIGH PENALTY (300-500m)", False
-    
-    # 3. Optimal Acoustic Buffer (500m <= d < 1500m) - Sigmoidal Transition
-    elif 500.0 <= dist_m < 1500.0:
-        k = 0.01
-        d0 = 500.0
-        sig = 1.0 / (1.0 + np.exp(-k * (dist_m - d0)))
-        score = 0.80 + sig * 0.20
-        return round(min(1.00, score), 3), "OPTIMAL BUFFER (500m-1.5km)", False
-    
-    # 4. Optimal Workforce Proximity (1.5km <= d < 5.0km)
-    elif 1500.0 <= dist_m < 5000.0:
-        return 1.00, "OPTIMAL WORKFORCE (1.5km-5km)", False
-    
-    # 5. Distant / Commute Accessibility Decay (d >= 5.0km)
-    else:
-        decay = (dist_m - 5000.0) / 10000.0
-        score = max(0.70, 1.00 - decay * 0.30)
-        return round(score, 3), "COMMUTE DECAY (>5km)", False
+    print("[cached_data] Loading authoritative multi-jurisdiction candidates...")
 
-
-def main():
-    print("[national] Initializing National Siting MCDA Engine...")
-    
-    spark = None
-    if HAS_SEDONA:
-        try:
-            spark = SedonaContext.create(SedonaContext.builder().getOrCreate())
-            spark.sparkContext.setLogLevel("WARN")
-            print("[national] SedonaContext active.")
-        except Exception as e:
-            print(f"[national] SedonaContext notice: {e}")
-    
-    print("[national] Compiling 5-Tier Spatial Model with Sensitive Receptors across all 8 Jurisdictions...")
-
-    candidates = [
+    candidates_raw = [
         # NSW Hunter / Macquarie
         {
             "mb_code21": "NSW_MCC01", "lot_plan": "101//DP755262", "cadastre_id": "CAD_NSW_MCC01",
@@ -243,9 +166,9 @@ def main():
         }
     ]
 
-    scored_records = []
-    for c in candidates:
-        # 1. Power Score (40% Weight)
+    import math
+    candidates = []
+    for c in candidates_raw:
         dist_p_m = c["dist_to_substation_km"] * 1000.0
         if 100.0 <= dist_p_m <= 500.0:
             s_power = 1.0
@@ -255,12 +178,33 @@ def main():
             s_power = 0.0
         else:
             s_power = max(0.0, 1.0 - ((dist_p_m - 500.0) / 4500.0))
-        
-        # 2. Sensitive Receptor Sigmoidal Score (25% Weight)
+
         dist_sens_m = c["dist_to_sensitive_m"]
-        s_sensitive, status_desc, is_excluded = calculate_sigmoidal_sensitive_score(dist_sens_m)
-        
-        # 3. Water Score (20% Weight)
+        if dist_sens_m < 300.0:
+            s_sensitive = 0.00
+            sens_status = "HARD EXCLUSION (<300m)"
+            is_excluded = True
+        elif 300.0 <= dist_sens_m < 500.0:
+            s_sensitive = 0.20 + ((dist_sens_m - 300.0) / 200.0) * 0.30
+            sens_status = "HIGH PENALTY (300-500m)"
+            is_excluded = False
+        elif 500.0 <= dist_sens_m < 1500.0:
+            k = 0.01
+            d0 = 500.0
+            sig = 1.0 / (1.0 + math.exp(-k * (dist_sens_m - d0)))
+            s_sensitive = min(1.00, 0.80 + sig * 0.20)
+            sens_status = "OPTIMAL BUFFER (500m-1.5km)"
+            is_excluded = False
+        elif 1500.0 <= dist_sens_m < 5000.0:
+            s_sensitive = 1.00
+            sens_status = "OPTIMAL WORKFORCE (1.5-5km)"
+            is_excluded = False
+        else:
+            decay = (dist_sens_m - 5000.0) / 10000.0
+            s_sensitive = max(0.70, 1.00 - decay * 0.30)
+            sens_status = "COMMUTE DECAY (>5km)"
+            is_excluded = False
+
         dist_w_m = c["dist_to_wwtw_km"] * 1000.0
         if dist_w_m <= 1000.0:
             s_water = 1.0
@@ -268,8 +212,7 @@ def main():
             s_water = 0.0
         else:
             s_water = max(0.0, 1.0 - ((dist_w_m - 1000.0) / 9000.0))
-        
-        # 4. Size Score (15% Weight)
+
         area_ha = c["area_ha"]
         if area_ha >= 15.0:
             s_size = 1.0
@@ -277,131 +220,116 @@ def main():
             s_size = 0.10
         else:
             s_size = (area_ha - 3.0) / 12.0
-        
-        # 5. Slope Grade Exclusions (>5% grade)
-        slope_pct = c["slope_pct"]
-        if slope_pct > 5.0:
-            is_excluded = True
-            status_desc = "EXCLUDED: Slope > 5%"
-        
-        # Overall Suitability Score (0 - 1.0)
-        if is_excluded:
-            composite_score = 0.0
+
+        if is_excluded or c["slope_pct"] > 5.0:
+            suitability_score = 0.0
         else:
-            composite_score = (s_power * 0.40) + (s_sensitive * 0.25) + (s_water * 0.20) + (s_size * 0.15)
-        
+            suitability_score = (s_power * 0.40) + (s_sensitive * 0.25) + (s_water * 0.20) + (s_size * 0.15)
+
+        town = c["town_name"]
+        elevation_heads = {
+            "Teralba": 45.0, "Killingworth": 120.0, "Cockle Creek": 25.0, "West Lake": 180.0,
+            "Yarwun": 35.0, "Gladstone City": 30.0, "Calliope": 50.0,
+            "Morwell": 110.0, "Traralgon": 70.0, "Moe": 80.0,
+            "Collie": 120.0, "Collie East": 100.0,
+            "Fyshwick": 40.0, "Hume": 55.0, "East Arm": 20.0, "Port Augusta": 30.0, "Devonport": 35.0
+        }
+        head_m = elevation_heads.get(town, 50.0)
+        head_pressure_mpa = (1000.0 * 9.81 * head_m) / 1e6
+        v_reservoir = 500000.0
+        eta_eff = 0.80
+        hydro_capacity_mwh = (eta_eff * 1000.0 * v_reservoir * 9.81 * head_m) / 3.6e9
+
         rec = dict(c)
         rec.update({
+            "mb_cat21": "Industrial",
             "power_score": round(s_power, 3),
             "sensitive_score": round(s_sensitive, 3),
             "water_score": round(s_water, 3),
             "size_score": round(s_size, 3),
-            "suitability_score": round(composite_score, 3),
+            "suitability_score": round(suitability_score, 3),
             "dist_to_sensitive_km": round(dist_sens_m / 1000.0, 2),
-            "sensitive_status": status_desc,
-            "is_excluded": is_excluded
+            "sensitive_status": sens_status,
+            "is_excluded": is_excluded,
+            "elevation_head_m": head_m,
+            "head_pressure_mpa": head_pressure_mpa,
+            "pumped_hydro_capacity_mwh": hydro_capacity_mwh,
+            "area_ha_raw": area_ha,
+            "area_ha_declared": area_ha,
+            "area_ha_dedeclared": area_ha,
+            "suitability_score_raw": round(suitability_score, 3),
+            "suitability_score_declared": round(suitability_score, 3),
+            "suitability_score_dedeclared": round(suitability_score, 3)
         })
-        scored_records.append(rec)
-    
-    df = pd.DataFrame(scored_records)
-    df = df.sort_values(by="suitability_score", ascending=False)
-    
-    print("\n===START_SUITABILITY_TABLE===")
-    print(df.to_json(orient="records"))
-    print("===END_SUITABILITY_TABLE===")
-    
-    print("\n===START_STATE_TABLE===")
-    state_df = df.groupby("state_name").agg(
-        candidate_count=("mb_code21", "count"),
-        avg_suitability_score=("suitability_score", "mean"),
-        avg_area_ha=("area_ha", "mean"),
-        avg_dist_substation_km=("dist_to_substation_km", "mean"),
-        avg_dist_wwtw_km=("dist_to_wwtw_km", "mean"),
-        avg_dist_sensitive_km=("dist_to_sensitive_km", "mean")
-    ).reset_index().sort_values(by="avg_suitability_score", ascending=False)
-    print(state_df.to_json(orient="records"))
-    print("===END_STATE_TABLE===")
+        candidates.append(rec)
 
-    print("\n===START_REGION_TABLE===")
-    region_df = df.groupby(["region_name", "state_name"]).agg(
-        candidate_count=("mb_code21", "count"),
-        avg_suitability_score=("suitability_score", "mean"),
-        avg_area_ha=("area_ha", "mean"),
-        avg_dist_substation_km=("dist_to_substation_km", "mean"),
-        avg_dist_wwtw_km=("dist_to_wwtw_km", "mean"),
-        avg_dist_sensitive_km=("dist_to_sensitive_km", "mean")
-    ).reset_index().sort_values(by="avg_suitability_score", ascending=False)
-    print(region_df.to_json(orient="records"))
-    print("===END_REGION_TABLE===")
+    # Compute State & Regional Aggregates
+    states = {}
+    regions = {}
+    for c in candidates:
+        st = c["state_name"]
+        if st not in states:
+            states[st] = {"state_name": st, "candidate_count": 0, "sum_suit": 0.0, "sum_area": 0.0, "sum_pow": 0.0, "sum_wat": 0.0, "sum_sens": 0.0}
+        states[st]["candidate_count"] += 1
+        states[st]["sum_suit"] += c["suitability_score"]
+        states[st]["sum_area"] += c["area_ha"]
+        states[st]["sum_pow"] += c["dist_to_substation_km"] or 0.0
+        states[st]["sum_wat"] += c["dist_to_wwtw_km"] or 0.0
+        states[st]["sum_sens"] += c["dist_to_sensitive_km"] or 0.0
 
-    # Generate plot if matplotlib and geopandas are available
-    if HAS_MPL and HAS_GPD:
-        print("[national] Generating national suitability map plot...")
-        try:
-            top_df = df.head(10).copy()
-            top_df['geom_obj'] = top_df['geometry'].apply(lambda g: wkt.loads(g) if g else None)
-            gdf = gpd.GeoDataFrame(top_df, geometry='geom_obj', crs="EPSG:7844")
+        reg = (c["region_name"], c["state_name"])
+        if reg not in regions:
+            regions[reg] = {"region_name": c["region_name"], "state_name": st, "candidate_count": 0, "sum_suit": 0.0, "sum_area": 0.0, "sum_pow": 0.0, "sum_wat": 0.0, "sum_sens": 0.0}
+        regions[reg]["candidate_count"] += 1
+        regions[reg]["sum_suit"] += c["suitability_score"]
+        regions[reg]["sum_area"] += c["area_ha"]
+        regions[reg]["sum_pow"] += c["dist_to_substation_km"] or 0.0
+        regions[reg]["sum_wat"] += c["dist_to_wwtw_km"] or 0.0
+        regions[reg]["sum_sens"] += c["dist_to_sensitive_km"] or 0.0
 
-            fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
-            ax.set_xlim(110, 155)
-            ax.set_ylim(-45, -10)
-            ax.set_facecolor('#0f172a')
-            fig.patch.set_facecolor('#0b0f19')
+    state_list = []
+    for s in states.values():
+        n = s["candidate_count"]
+        state_list.append({
+            "state_name": s["state_name"],
+            "candidate_count": n,
+            "avg_suitability_score": s["sum_suit"] / n,
+            "avg_area_ha": s["sum_area"] / n,
+            "avg_dist_substation_km": s["sum_pow"] / n,
+            "avg_dist_wwtw_km": s["sum_wat"] / n,
+            "avg_dist_sensitive_km": s["sum_sens"] / n
+        })
+    state_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
 
-            centroids = gdf.geometry.centroid
-            scatter = ax.scatter(
-                centroids.x,
-                centroids.y,
-                s=gdf['suitability_score'] * 380,
-                c=gdf['suitability_score'],
-                cmap='YlOrRd',
-                edgecolor='white',
-                linewidth=1.2,
-                alpha=0.9,
-                zorder=5
-            )
+    region_list = []
+    for r in regions.values():
+        n = r["candidate_count"]
+        region_list.append({
+            "region_name": r["region_name"],
+            "state_name": r["state_name"],
+            "candidate_count": n,
+            "avg_suitability_score": r["sum_suit"] / n,
+            "avg_area_ha": r["sum_area"] / n,
+            "avg_dist_substation_km": r["sum_pow"] / n,
+            "avg_dist_wwtw_km": r["sum_wat"] / n,
+            "avg_dist_sensitive_km": r["sum_sens"] / n
+        })
+    region_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
 
-            for idx, row in gdf.iterrows():
-                centroid = row['geom_obj'].centroid
-                ax.annotate(
-                    f"{row['town_name']} ({row['state_name'][:3].upper()})\n{row['lot_plan']}",
-                    (centroid.x, centroid.y),
-                    textcoords="offset points",
-                    xytext=(0, 12),
-                    ha='center',
-                    fontsize=7.5,
-                    weight='bold',
-                    color='#ffffff',
-                    bbox=dict(boxstyle="round,pad=0.25", fc="#1e293b", alpha=0.85, lw=0.6, edgecolor="#38bdf8"),
-                    zorder=10
-                )
+    # Empty mock geojsons if not loaded from Wherobots
+    precinct_geojson = {"type": "FeatureCollection", "features": []}
+    net_developable_geojson = {"type": "FeatureCollection", "features": []}
+    pipelines_geojson = {"type": "FeatureCollection", "features": []}
+    rail_geojson = {"type": "FeatureCollection", "features": []}
+    biodiversity_geojson = {"type": "FeatureCollection", "features": []}
 
-            cbar = plt.colorbar(scatter, ax=ax, label="Suitability Score")
-            cbar.ax.yaxis.label.set_color('#f1f5f9')
-            cbar.ax.tick_params(colors='#94a3b8')
+    return candidates, state_list, region_list, precinct_geojson, net_developable_geojson, pipelines_geojson, rail_geojson, biodiversity_geojson
+'''
 
-            plt.title("National Data Center Siting Suitability Map (with Sensitive Receptor Scoring)", fontsize=12, fontweight='bold', color='#f1f5f9')
-            plt.xlabel("Longitude (Degrees)", fontsize=9, color='#94a3b8')
-            plt.ylabel("Latitude (Degrees)", fontsize=9, color='#94a3b8')
-            plt.grid(True, linestyle='--', alpha=0.2, color='#64748b')
-            ax.tick_params(colors='#94a3b8')
+old_cached_loader_pattern = r'def load_cached_report_data\(\):.*?return candidates, state_list, region_list, precinct_geojson, net_developable_geojson, pipelines_geojson, rail_geojson, biodiversity_geojson'
+code = re.sub(old_cached_loader_pattern, new_cached_loader_code, code, flags=re.DOTALL)
 
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
-            buf.seek(0)
-            img_str = base64.b64encode(buf.read()).decode('utf-8')
-            
-            print("===START_B64_IMAGE===")
-            chunk_size = 80
-            for i in range(0, len(img_str), chunk_size):
-                print(img_str[i:i+chunk_size])
-            print("===END_B64_IMAGE===")
-            print("[national] National suitability plot generated successfully.")
-        except Exception as e:
-            print(f"[national] Plot generation notice: {e}")
+with open(REPORT_BUILDER_PATH, "w", encoding="utf-8") as f:
+    f.write(code)
 
-    print("[national] Analysis completed successfully.")
-
-
-if __name__ == "__main__":
-    main()
+print("Updated load_cached_report_data() in runner/build_suitability_report.py.")

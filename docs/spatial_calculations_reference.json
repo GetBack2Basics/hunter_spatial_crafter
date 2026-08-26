@@ -87,6 +87,65 @@
       }
     ]
   },
+  "sigmoidal_sensitive_receptor_decay": {
+    "title": "Continuous Sigmoidal Buffer Decay for Social & Community Receptors",
+    "formula": "S_sensitive(d) = 1 / (1 + exp(-k * (d - d0)))",
+    "variables": {
+      "S_sensitive": "Sensitive receptor suitability score [0.00, 1.00]",
+      "d": "Minimum Euclidean distance from parcel boundary to nearest sensitive receptor (meters)",
+      "d0": "Critical acoustic and safety compliance threshold distance (500 meters)",
+      "k": "Sigmoidal steepness factor (0.01 m^-1)"
+    },
+    "classification_thresholds": {
+      "exclusion": "d < 300m -> Score 0.00 (Hard Exclusion / Incompatible Land Use)",
+      "penalty": "300m <= d < 500m -> Score 0.20 - 0.50 (High Penalty / Acoustic Wall Required)",
+      "optimal_buffer": "500m <= d < 1500m -> Score 0.80 - 1.00 (Optimal Setback / Low Conflict)",
+      "workforce_optimal": "1500m <= d < 5000m -> Score 1.00 (Optimal Staff Commute Proximity)",
+      "workforce_decay": "d >= 5000m -> Linear decay down to 0.70 at 15,000m (Commute Accessibility Penalty)"
+    },
+    "description": "Prevents land-use conflicts with schools, hospitals, and residential zones using EPA acoustic setback standards while maintaining workforce accessibility within regional commuting bands.",
+    "references": [
+      {
+        "citation": "NSW Environment Protection Authority (EPA). (2017). Noise Policy for Industry (NPfI).",
+        "url": "https://www.epa.nsw.gov.au/your-environment/noise/industrial-noise"
+      },
+      {
+        "citation": "Standards Australia. (2018). AS 1055: Acoustics—Description and measurement of environmental noise.",
+        "url": "https://www.standards.org.au"
+      }
+    ]
+  },
+  "dem_slope_filtering": {
+    "title": "Digital Elevation Model (DEM) Topographic Slope Suitability",
+    "formula": "Slope_deg = arctan(sqrt((dz/dx)^2 + (dz/dy)^2)) * (180 / pi)",
+    "variables": {
+      "Slope_pct": "Topographic slope grade percentage (%)",
+      "Threshold": "Max 5.0% for heavy data center slab foundation construction"
+    },
+    "description": "Evaluates ground grade from Geoscience Australia ELVIS DEM. Slopes > 5% trigger heavy earthmoving cost penalties or build exclusions.",
+    "references": [
+      {
+        "citation": "Geoscience Australia. (2023). ELVIS Elevation Foundation Spatial Data Framework.",
+        "url": "https://elevation.fsdf.org.au/"
+      }
+    ]
+  },
+  "cadastre_lotplan_querying": {
+    "title": "National & State Cadastral Lot/Plan Identifier Framework",
+    "formula": "Standardized LotPlan = CONCAT(Lot_Number, '//', Plan_Type, Plan_Number)",
+    "variables": {
+      "Lot_Number": "Cadastral lot number (e.g. 1, 23)",
+      "Plan_Type": "Plan classification (e.g. DP, SP, RP, PS)",
+      "Plan_Number": "Registered deposited/registered/survey plan number"
+    },
+    "description": "Standardizes multi-jurisdiction cadastral attributes from Geoscape, NSW Cadastre, QLD DCDB, Vicmap, and Landgate SLIP to enable lot/plan and address querying.",
+    "references": [
+      {
+        "citation": "Intergovernmental Committee on Surveying and Mapping (ICSM). (2020). Cadastral Spatial Data Model (CSDM).",
+        "url": "https://www.icsm.gov.au"
+      }
+    ]
+  },
   "methodology_notes": {
     "gladstone_perfect_score": {
       "title": "Gladstone Perfect Score Resolution",
