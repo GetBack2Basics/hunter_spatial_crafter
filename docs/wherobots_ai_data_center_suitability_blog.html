@@ -482,19 +482,7 @@
           </div>
         </div>
 
-        <!-- 2. States -->
-        <div class="kpi-pill">
-          <div class="kpi-top">
-            <span class="val">8</span>
-            <a href="#fn-states" class="info-link" title="Click to view footnote details">ℹ</a>
-          </div>
-          <span class="lbl">States &amp; Territories</span>
-          <div class="tooltip-box">
-            <strong>All 8 Jurisdictions:</strong> NSW, QLD, VIC, WA, ACT, NT, SA, and TAS.
-          </div>
-        </div>
-
-        <!-- 3. National Geometries -->
+        <!-- 2. National Geometries -->
         <div class="kpi-pill">
           <div class="kpi-top">
             <span class="val">15.91M</span>
@@ -506,7 +494,7 @@
           </div>
         </div>
 
-        <!-- 4. Regional Join Speed -->
+        <!-- 3. Regional Join Speed -->
         <div class="kpi-pill">
           <div class="kpi-top">
             <span class="val">2.4s</span>
@@ -518,7 +506,7 @@
           </div>
         </div>
 
-        <!-- 5. National Scan Speed -->
+        <!-- 4. National Scan Speed -->
         <div class="kpi-pill">
           <div class="kpi-top">
             <span class="val">3.2s</span>
@@ -530,7 +518,7 @@
           </div>
         </div>
 
-        <!-- 6. In-Browser Recalibration -->
+        <!-- 5. In-Browser Recalibration -->
         <div class="kpi-pill">
           <div class="kpi-top">
             <span class="val">&lt; 1ms</span>
@@ -541,18 +529,30 @@
             <strong>Client-Side Execution:</strong> Real-time JavaScript re-scoring &amp; leaderboard re-sorting with zero server calls.
           </div>
         </div>
+
+        <!-- 6. Total Compute Cost in AUD -->
+        <div class="kpi-pill">
+          <div class="kpi-top">
+            <span class="val" style="color: #38bdf8;">~$36 AUD</span>
+            <a href="#fn-compute-cost" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
+          <span class="lbl">Batch Compute Cost</span>
+          <div class="tooltip-box">
+            <strong>~$36 AUD (US$24.13):</strong> Total Wherobots Cloud compute spend across dozens of full automated headless batch runs.
+          </div>
+        </div>
       </div>
 
       <!-- Footnote Detail Card (Ensures readability in all blog engines) -->
       <div class="tech-notes-card" id="technical-notes">
         <strong>Technical Metric Notes:</strong>
         <ol>
-          <li id="fn-candidates"><strong>17 Candidates:</strong> Evaluates industrial parcels across regional hubs (Hunter, Latrobe, Collie, Gladstone, etc.).</li>
-          <li id="fn-states"><strong>8 Jurisdictions:</strong> Full national coverage (NSW, QLD, VIC, WA, ACT, NT, SA, TAS).</li>
+          <li id="fn-candidates"><strong>17 Candidates:</strong> Evaluates industrial parcels across regional transition hubs (Hunter, Latrobe, Collie, Gladstone, etc.).</li>
           <li id="fn-national-geoms"><strong>15.91M Geometries:</strong> Total dataset volume queried across 16 authoritative national and state portals.</li>
           <li id="fn-regional-join"><strong>2.4s Spatial Join:</strong> Reproducible benchmark Spatial SQL execution on Wherobots Cloud over 1.75M+ regional features.</li>
           <li id="fn-national-scan"><strong>3.2s National Scan:</strong> Query scan duration across the entire 15.91M national dataset using Hilbert space-filling curve partitioning (down from 18.4s unpartitioned).</li>
           <li id="fn-browser-recalib"><strong>&lt; 1ms Recalibration:</strong> Instant multi-criteria simulation in the browser using precomputed spatial weights.</li>
+          <li id="fn-compute-cost"><strong>~$36 AUD (US$24.13) Total Batch Compute Cost:</strong> Total cloud computing cost incurred for dozens of automated headless batch ETL and analysis runs on Wherobots.</li>
         </ol>
       </div>
     </div>
