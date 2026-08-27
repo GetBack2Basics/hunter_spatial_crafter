@@ -22,7 +22,8 @@ sys.path.insert(0, ".")
 from scratch.prepare_authoritative_candidates import (
     candidates, state_list, region_list,
     precinct_geojson, net_dev_geojson, pipelines_geojson, rail_geojson, bio_geojson,
-    ref_data, calculations_only, notes_html, tbody_html, next_steps_html, recent_changes_html
+    ref_data, calculations_only, notes_html, tbody_html, next_steps_html, recent_changes_html,
+    cost_reduction_html
 )
 
 HTML_PAGE = """<!DOCTYPE html>
@@ -318,12 +319,85 @@ HTML_PAGE = """<!DOCTYPE html>
     }
 
     .stat-card {
+      position: relative;
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       padding: 1rem 1.25rem;
       border-radius: 0.75rem;
       display: flex;
       flex-direction: column;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+
+    .stat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-info-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: rgba(96, 165, 250, 0.15);
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      color: #93c5fd;
+      font-size: 0.68rem;
+      font-weight: bold;
+      cursor: help;
+      transition: all 0.2s;
+    }
+
+    .stat-card:hover .stat-info-icon {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #60a5fa;
+    }
+
+    .stat-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      background: #0f172a;
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      color: #e2e8f0;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      z-index: 50;
+      transition: opacity 0.2s, visibility 0.2s;
+      pointer-events: none;
+      text-align: left;
+    }
+
+    .stat-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #0f172a transparent transparent transparent;
+    }
+
+    .stat-card:hover .stat-tooltip {
+      visibility: visible;
+      opacity: 1;
     }
 
     .stat-title {
@@ -331,7 +405,6 @@ HTML_PAGE = """<!DOCTYPE html>
       color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 0.25rem;
     }
 
     .stat-val {
@@ -529,24 +602,51 @@ HTML_PAGE = """<!DOCTYPE html>
   <!-- Metric Badges -->
   <div class="stat-row">
     <div class="stat-card">
-      <span class="stat-title">Candidates Analyzed</span>
+      <div class="stat-card-header">
+        <span class="stat-title">Candidates Analyzed</span>
+        <span class="stat-info-icon" title="View details">ℹ</span>
+      </div>
       <span class="stat-val" id="stat-total">17</span>
       <span class="stat-desc">Industrial Parcels across 8 States</span>
+      <div class="stat-tooltip">
+        <strong>17 Industrial Sites:</strong> Spanning 8 states/territories across Australia's National Electricity Market (NEM) and SWIS grids.
+      </div>
     </div>
+
     <div class="stat-card">
-      <span class="stat-title">States / Territories</span>
-      <span class="stat-val" id="stat-states">8</span>
-      <span class="stat-desc">National NEM & SWIS Coverage</span>
+      <div class="stat-card-header">
+        <span class="stat-title">Spatial Cloud Pipeline</span>
+        <span class="stat-info-icon" title="View details">ℹ</span>
+      </div>
+      <span class="stat-val" id="stat-features" style="color: #38bdf8;">15.91M</span>
+      <span class="stat-desc">16 National & State Portals</span>
+      <div class="stat-tooltip">
+        <strong>15,911,245 Geometries:</strong> Total volume ingested & queried across 16 authoritative portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47.5k POIs, 275k rail, 241k power).
+      </div>
     </div>
+
     <div class="stat-card">
-      <span class="stat-title">Top Benchmark Site</span>
-      <span class="stat-val" id="stat-best" style="font-size: 1.25rem; color: #34d399;">Teralba (0.970)</span>
-      <span class="stat-desc">NSW Hunter / Macquarie Energy Hub</span>
+      <div class="stat-card-header">
+        <span class="stat-title">Regional Join Speed</span>
+        <span class="stat-info-icon" title="View details">ℹ</span>
+      </div>
+      <span class="stat-val" id="stat-speed" style="color: #34d399;">2.4s</span>
+      <span class="stat-desc">1.75M+ Features in Cloud</span>
+      <div class="stat-tooltip">
+        <strong>2.4s Query Execution:</strong> Complex spatial joins & net developable area overlay across 1.75M+ regional geometries on Wherobots Cloud (down from 2-3 days on desktop GIS).
+      </div>
     </div>
+
     <div class="stat-card">
-      <span class="stat-title">Spatial Cloud Pipeline</span>
-      <span class="stat-val" style="color: #38bdf8;">15.91M</span>
-      <span class="stat-desc">Authoritative Geometries Queried</span>
+      <div class="stat-card-header">
+        <span class="stat-title">Batch Compute Spend</span>
+        <span class="stat-info-icon" title="View details">ℹ</span>
+      </div>
+      <span class="stat-val" style="color: #38bdf8;">~$36 AUD</span>
+      <span class="stat-desc">US$24.13 Cloud Spend</span>
+      <div class="stat-tooltip">
+        <strong>~$36 AUD (US$24.13):</strong> Total Wherobots Cloud compute spend across dozens of full automated headless batch ETL and analysis runs.
+      </div>
     </div>
   </div>
 
@@ -762,10 +862,24 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
 
     <div class="card">
-      <h2>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        National Candidate Leaderboard
-      </h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
+        <h2 style="margin: 0; padding: 0; border: none; display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Data Center Site Ranking
+        </h2>
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.25); padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+          <button type="button" onclick="openPersonaTab()" title="Click to view detailed scenario & persona breakdown in tabs" style="background: none; border: none; padding: 0; font-size: 0.85rem; font-weight: 600; color: #c084fc; display: flex; align-items: center; gap: 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;">
+            <span>🧭</span> I am a...
+          </button>
+          <select id="persona-select" onchange="selectPersona(this.value)" style="padding: 0.25rem 0.6rem; border-radius: 6px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(168, 85, 247, 0.4); color: #f8fafc; font-size: 0.85rem; font-family: 'Outfit', sans-serif; font-weight: 500; outline: none; cursor: pointer;">
+            <option value="general-public" selected>General Public</option>
+            <option value="planner">Planner</option>
+            <option value="regulator">Regulator</option>
+            <option value="developer">Developer</option>
+            <option value="community">Community</option>
+          </select>
+        </div>
+      </div>
       <div style="margin-bottom: 0.75rem;">
         <input type="text" id="cadastre-search-input" placeholder="🔍 Search candidate sites by Lot/Plan (e.g. 101//DP755262), Address, or Locality..." style="width: 100%; padding: 0.65rem 1rem; border-radius: 8px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(59, 130, 246, 0.3); color: #f1f5f9; font-size: 0.85rem; outline: none;" oninput="renderLeaderboard()">
       </div>
@@ -827,7 +941,7 @@ HTML_PAGE = """<!DOCTYPE html>
   </div>
 
   <!-- Benchmarking, Data Provenance & Tabs -->
-  <div class="card section-full" style="margin-bottom: 1.5rem;">
+  <div class="card section-full" id="benchmarking-tabs-card" style="margin-bottom: 1.5rem;">
     <h2 style="color: #60a5fa;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
       Benchmarking, Data Provenance & Open Evidence Trail
@@ -835,6 +949,8 @@ HTML_PAGE = """<!DOCTYPE html>
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(event, 'state-summary')">State Benchmarking</button>
       <button class="tab-btn" onclick="switchTab(event, 'region-summary')">Regional Aggregates</button>
+      <button class="tab-btn" id="tab-btn-personas" onclick="switchTab(event, 'strategic-personas')" style="border-color: #c084fc; color: #c084fc; font-weight: 600;">Strategic Personas ("I am a...")</button>
+      <button class="tab-btn" onclick="switchTab(event, 'cost-reduction-tips')" style="border-color: #34d399; color: #34d399; font-weight: 600;">Cost Reduction Tips</button>
       <button class="tab-btn" onclick="switchTab(event, 'data-sources')">Data Sources & Volumes</button>
       <button class="tab-btn" onclick="switchTab(event, 'lakehouse-storage')">Lakehouse Storage & Directory Tree</button>
       <button class="tab-btn" onclick="switchTab(event, 'table-footprint')">Table Footprint & Compression</button>
@@ -866,7 +982,105 @@ HTML_PAGE = """<!DOCTYPE html>
       </table>
     </div>
 
-    <!-- Tab 3: Data Sources & Volumes -->
+    <!-- Tab 3: Strategic Personas ("I am a...") -->
+    <div id="strategic-personas" class="tab-content" style="max-height: 480px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; padding: 0.5rem 0.75rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h3 style="color: #c084fc; margin: 0 0 0.25rem;">Strategic Stakeholder Personas & Policy Presets</h3>
+          <p style="color: var(--text-secondary); margin: 0; font-size: 0.88rem;">
+            AuraSiting Crafter decouples spatial geometry calculation from stakeholder-specific policy weights. Selecting a persona in the top dropdown or clicking below instantly reconfigures the real-time simulation engine:
+          </p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 0.75rem; padding: 1.15rem; cursor: pointer;" onclick="selectPersona('general-public')">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.35rem;">🌐</span>
+              <h4 style="margin: 0; color: #38bdf8; font-size: 0.95rem;">General Public</h4>
+            </div>
+            <span class="metadata-pill" style="border-color: #38bdf8; color: #38bdf8; font-size: 0.7rem; padding: 0.15rem 0.45rem;">Balanced Baseline</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem;"><strong>Preset Weights:</strong> Power 40%, Sensitive 25%, Water 20%, Size 15%</p>
+          <ul style="padding-left: 1.25rem; font-size: 0.825rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.35rem; margin: 0;">
+            <li><strong>Balanced Siting:</strong> Equitably balances grid proximity, acoustic setbacks, and water reuse.</li>
+            <li><strong>Open Evidence:</strong> Transparent, reproducible spatial analysis with no black-box scoring.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 0.75rem; padding: 1.15rem; cursor: pointer;" onclick="selectPersona('planner')">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.35rem;">🏛️</span>
+              <h4 style="margin: 0; color: #38bdf8; font-size: 0.95rem;">Planner</h4>
+            </div>
+            <span class="metadata-pill" style="border-color: #38bdf8; color: #38bdf8; font-size: 0.7rem; padding: 0.15rem 0.45rem;">Statutory & Cadastre</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem;"><strong>Preset Weights:</strong> Power 40%, Sensitive 25%, Water 20%, Size 15%</p>
+          <ul style="padding-left: 1.25rem; font-size: 0.825rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.35rem; margin: 0;">
+            <li><strong>Automated NDA:</strong> Computes Net Developable Area by subtracting 30m riparian, 20m pipeline, &gt;5% slope, and mine subsidence overlays in seconds.</li>
+            <li><strong>Housing Protection:</strong> Automatically disqualifies residential meshblocks and Transport Oriented Development (TOD) precincts.</li>
+            <li><strong>Digital Twin Ready:</strong> Native GDA2020 GeoParquet outputs stream straight into state Spatial Digital Twins.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 0.75rem; padding: 1.15rem; cursor: pointer;" onclick="selectPersona('regulator')">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.35rem;">⚡</span>
+              <h4 style="margin: 0; color: #fbbf24; font-size: 0.95rem;">Regulator</h4>
+            </div>
+            <span class="metadata-pill" style="border-color: #fbbf24; color: #fbbf24; font-size: 0.7rem; padding: 0.15rem 0.45rem;">Net-Zero & Water</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem;"><strong>Preset Weights:</strong> Power 40%, Sensitive 25%, Water 25%, Size 10%</p>
+          <ul style="padding-left: 1.25rem; font-size: 0.825rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.35rem; margin: 0;">
+            <li><strong>Net-Zero Mandate:</strong> Verifies co-location with &ge;132kV transmission substations and declared Renewable Energy Zones (REZs).</li>
+            <li><strong>Potable Water Protection:</strong> Hard exclusion buffers on drinking catchments; prioritizes recycled wastewater cooling loops.</li>
+            <li><strong>Sovereign Scenario Engine:</strong> Zero-cloud-cost DuckDB-WASM browser engine allows regulators to test proposed legislation dynamically.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 0.75rem; padding: 1.15rem; cursor: pointer;" onclick="selectPersona('developer')">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.35rem;">💼</span>
+              <h4 style="margin: 0; color: #34d399; font-size: 0.95rem;">Developer</h4>
+            </div>
+            <span class="metadata-pill" style="border-color: #34d399; color: #34d399; font-size: 0.7rem; padding: 0.15rem 0.45rem;">Power & Scale</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem;"><strong>Preset Weights:</strong> Power 50%, Size 20%, Water 15%, Sensitive 15%</p>
+          <ul style="padding-left: 1.25rem; font-size: 0.825rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.35rem; margin: 0;">
+            <li><strong>National 8-Jurisdiction Screening:</strong> Unifies 17+ benchmark candidates across NEM & SWIS under a single consistent spatial matrix.</li>
+            <li><strong>Brownfield Advantage:</strong> Highlights retired coal power station sites with grandfathered transmission capacity and pre-zoned industrial pads.</li>
+            <li><strong>Granular Due Diligence:</strong> Instant search by Lot/Plan and street address with topographic slope and flood risk reports.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(192, 132, 252, 0.3); border-radius: 0.75rem; padding: 1.15rem; cursor: pointer;" onclick="selectPersona('community')">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.35rem;">🏘️</span>
+              <h4 style="margin: 0; color: #c084fc; font-size: 0.95rem;">Community</h4>
+            </div>
+            <span class="metadata-pill" style="border-color: #c084fc; color: #c084fc; font-size: 0.7rem; padding: 0.15rem 0.45rem;">Amenity & Trust</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 0.5rem;"><strong>Preset Weights:</strong> Sensitive 40%, Water 25%, Power 25%, Size 10%</p>
+          <ul style="padding-left: 1.25rem; font-size: 0.825rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.35rem; margin: 0;">
+            <li><strong>Acoustic & Sensitive Buffers:</strong> Enforces continuous sigmoidal setbacks (&ge;500m) safeguarding homes, schools, and hospitals from industrial noise.</li>
+            <li><strong>Just Transition:</strong> Repurposes legacy mining voids and rail infrastructure for clean high-tech digital jobs.</li>
+            <li><strong>Public Trust:</strong> 100% open-data spatial evidence replaces speculative developer marketing with auditable facts.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Cost Reduction Tips & Incremental Compute -->
+    <div id="cost-reduction-tips" class="tab-content" style="max-height: 500px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; padding: 0.5rem 0.75rem;">
+      __COST_REDUCTION_HTML__
+    </div>
+
+    <!-- Tab 5: Data Sources & Volumes -->
     <div id="data-sources" class="tab-content" style="max-height: 450px; overflow-y: auto;">
       <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 1rem;">
         Using cloud-optimized storage (Havasu/Iceberg tables) running on the Wherobots Cloud platform, we executed spatial queries over 16 authoritative national and state datasets:
@@ -976,10 +1190,10 @@ const railNetworkGeoJSON = __RAIL_NETWORK_JSON__;
 const biodiversityConstraintsGeoJSON = __BIODIVERSITY_JSON__;
 
 // Initialize Dashboard Metrics
-document.getElementById('stat-total').textContent = candidatesData.length;
+if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = candidatesData.length;
 const statesSet = new Set(candidatesData.map(c => c.state_name));
-document.getElementById('stat-states').textContent = statesSet.size;
-if (candidatesData.length > 0) {
+if (document.getElementById('stat-states')) document.getElementById('stat-states').textContent = statesSet.size;
+if (candidatesData.length > 0 && document.getElementById('stat-best')) {
   document.getElementById('stat-best').textContent = `${candidatesData[0].town_name} (${candidatesData[0].suitability_score.toFixed(3)})`;
 }
 
@@ -1387,14 +1601,89 @@ function renderLeaderboard() {
 }
 
 function updateStats() {
-  document.getElementById('stat-total').textContent = candidatesData.length;
+  if (document.getElementById('stat-total')) {
+    document.getElementById('stat-total').textContent = candidatesData.length;
+  }
   const statesSet = new Set(candidatesData.map(c => c.state_name));
-  document.getElementById('stat-states').textContent = statesSet.size;
+  if (document.getElementById('stat-states')) {
+    document.getElementById('stat-states').textContent = statesSet.size;
+  }
   
   const nswCandidates = candidatesData.filter(c => c.state_name === "New South Wales");
-  if (nswCandidates.length > 0) {
+  if (nswCandidates.length > 0 && document.getElementById('stat-best')) {
     const sortedNSW = [...nswCandidates].sort((a, b) => b.suitability_score - a.suitability_score);
     document.getElementById('stat-best').textContent = `${sortedNSW[0].town_name} (${sortedNSW[0].suitability_score.toFixed(3)})`;
+  }
+}
+
+// -------------------------------------------------------------
+// Stakeholder Persona Configuration & Switcher Engine ("I am a...")
+// -------------------------------------------------------------
+const PERSONA_CONFIGS = {
+  'general-public': {
+    name: 'General Public',
+    badgeColor: '#38bdf8',
+    weights: { power: 40, sensitive: 25, water: 20, size: 15, targetSize: 15 },
+    tsfExcluded: true
+  },
+  'planner': {
+    name: 'Planner',
+    badgeColor: '#38bdf8',
+    weights: { power: 40, sensitive: 25, water: 20, size: 15, targetSize: 15 },
+    tsfExcluded: true
+  },
+  'regulator': {
+    name: 'Regulator',
+    badgeColor: '#fbbf24',
+    weights: { power: 40, sensitive: 25, water: 25, size: 10, targetSize: 15 },
+    tsfExcluded: true
+  },
+  'developer': {
+    name: 'Developer',
+    badgeColor: '#34d399',
+    weights: { power: 50, sensitive: 15, water: 15, size: 20, targetSize: 20 },
+    tsfExcluded: false
+  },
+  'community': {
+    name: 'Community',
+    badgeColor: '#c084fc',
+    weights: { power: 25, sensitive: 40, water: 25, size: 10, targetSize: 10 },
+    tsfExcluded: true
+  }
+};
+
+function selectPersona(personaKey) {
+  const cfg = PERSONA_CONFIGS[personaKey];
+  if (!cfg) return;
+
+  const select = document.getElementById('persona-select');
+  if (select && select.value !== personaKey) {
+    select.value = personaKey;
+  }
+
+  // Apply weights to sliders
+  const pSlider = document.getElementById('power-weight-slider');
+  const sensSlider = document.getElementById('sensitive-weight-slider');
+  const wSlider = document.getElementById('water-weight-slider');
+  const sSlider = document.getElementById('size-weight-slider');
+  const tSlider = document.getElementById('target-size-slider');
+  const tsfChk = document.getElementById('tsf-toggle');
+
+  if (pSlider) pSlider.value = cfg.weights.power;
+  if (sensSlider) sensSlider.value = cfg.weights.sensitive;
+  if (wSlider) wSlider.value = cfg.weights.water;
+  if (sSlider) sSlider.value = cfg.weights.size;
+  if (tSlider) tSlider.value = cfg.weights.targetSize;
+  if (tsfChk) tsfChk.checked = !cfg.tsfExcluded;
+
+  recalculateSimulation();
+}
+
+function openPersonaTab() {
+  switchTab(null, 'strategic-personas');
+  const tabCard = document.getElementById('benchmarking-tabs-card');
+  if (tabCard) {
+    tabCard.scrollIntoView({ behavior: 'smooth' });
   }
 }
 
@@ -1415,6 +1704,7 @@ function renderDashboard() {
 
 // Initial render
 renderDashboard();
+selectPersona('general-public');
 
 // Interactive Simulation Sandbox Handler
 function recalculateSimulation() {
@@ -1479,7 +1769,7 @@ function recalculateSimulation() {
   if (selectedSiteTitle) {
     const cleanTitle = selectedSiteTitle.split(' (')[0];
     const match = candidatesData.find(c => c.town_name === cleanTitle);
-    if (match) updateAuditPanel(match);
+    if (match) updateAuditPanel(match, false);
   }
 }
 
@@ -1538,7 +1828,12 @@ function switchTab(evt, tabId) {
   
   const target = document.getElementById(tabId);
   if (target) target.classList.add('active');
-  if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  } else {
+    const btn = document.querySelector(`.tab-btn[onclick*="'${tabId}'"]`);
+    if (btn) btn.classList.add('active');
+  }
 }
 
 // Render Calculations Tab dynamically
@@ -1596,6 +1891,7 @@ html_final = html_final.replace("__METHODOLOGY_NOTES__", notes_html)
 html_final = html_final.replace("__DATA_SOURCES_ROWS__", tbody_html)
 html_final = html_final.replace("__RECENT_CHANGES_HTML__", recent_changes_html)
 html_final = html_final.replace("__NEXT_STEPS_HTML__", next_steps_html)
+html_final = html_final.replace("__COST_REDUCTION_HTML__", cost_reduction_html)
 html_final = html_final.replace("__CALCULATION_REFERENCES_JSON__", json.dumps(calculations_only))
 
 output_path = "runner/national_suitability_report.html"

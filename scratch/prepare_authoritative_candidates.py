@@ -411,6 +411,16 @@ except Exception as wt_err:
     print(f"Warning: could not read docs/walkthrough.md: {wt_err}")
     recent_changes_html = "<p>Error loading Recent Changes tab content from Markdown.</p>"
 
+cost_reduction_md_path = "docs/cost_reduction_and_incremental_compute.md"
+try:
+    import markdown
+    with open(cost_reduction_md_path, "r", encoding="utf-8") as crf:
+        cr_text = crf.read()
+    cost_reduction_html = markdown.markdown(cr_text, extensions=['tables', 'fenced_code'])
+except Exception as cr_err:
+    print(f"Warning: could not read docs/cost_reduction_and_incremental_compute.md: {cr_err}")
+    cost_reduction_html = "<p>Error loading Cost Reduction Tips tab content from Markdown.</p>"
+
 # Data Sources table rows for all 16 Authoritative Portals
 tbody_html = """
           <tr><td>ACARA National Schools</td><td>Australian Curriculum, Assessment and Reporting Authority</td><td>REST / GeoJSON</td><td style="font-family: 'JetBrains Mono', monospace; font-weight: bold;">10,842</td><td style="font-family: 'JetBrains Mono', monospace; color: #10b981;">Raw Unchanged</td></tr>

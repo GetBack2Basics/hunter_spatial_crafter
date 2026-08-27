@@ -1,133 +1,44 @@
-# Walkthrough: Wherobots Guest Blog Post Update & GeoLibre Architecture
+# Walkthrough: AuraSiting Crafter National Discourse Alignment & Multi-Perspective Positioning
 
-This document summarizes the updates made to [`docs/wherobots_ai_data_center_suitability_blog.html`](file:///c:/Projects/hunter_spatial_crafter/docs/wherobots_ai_data_center_suitability_blog.html) and provides a comprehensive network architecture specification for **GeoLibre + Google Cloud Platform (GCP) + Wherobots Cloud + S3/GCS** to generate visual network diagrams for the blog post.
+## Overview
 
----
+This walkthrough documents the strategic positioning, narrative framework, multi-persona documentation, and content restructuring executed for **AuraSiting Crafter** (*The Australian Regional & AI Infrastructure Siting Engine*).
 
-## 1. Summary of Changes Made to `docs/wherobots_ai_data_center_suitability_blog.html`
-
-### A. Lead-In with Interactive Siting Explorer & 6-Card KPI Strip
-- Positioned the **Interactive Siting Explorer** prompt and direct launch button (`https://national-suitability-report.vercel.app`) immediately after the intro lead paragraph.
-- Added an interactive 6-pill KPI strip with CSS hover tooltips and accessible `ℹ` footnote anchors:
-  1. **17**: Candidates Benchmarked
-  2. **15.91M**: National Geometries Queried
-  3. **2.4s**: Regional Join Speed
-  4. **3.2s**: National Scan Time (Hilbert Partitioning)
-  5. **< 1ms**: Browser Sandbox Recalibration
-  6. **~$36 AUD (US$24.13)**: Total Batch Compute Cost
-
-### B. Full Runtime & Metric Reconciliation (Resolving Ben's Blockers)
-- Replaced ambiguous/conflicting runtime statements with verified, distinct definitions:
-  - **2.4 Seconds:** Core distributed Spatial SQL query execution (Apache Sedona on Wherobots Cloud) over 1.75M+ features using Havasu metadata envelope pruning, Hilbert clustering, and vectorized memory joins.
-  - **18.4s ➔ 3.2s:** Query scan acceleration over 15.91M national geometries using Hilbert space-filling curve partitioning.
-  - **200.6 Seconds:** Complete cold, uncached batch ETL pipeline duration (multi-layer ingestion, GDA2020 CRS transformations, `ST_MakeValid` topology repairs, and Havasu table writes).
-  - **< 1 Millisecond:** Instant client-side What-If sandbox re-scoring executed in the browser via JavaScript.
-- Updated dataset volume to **15,911,245 geometries across 16 authoritative national and state portals**.
-- Emphasized the **85.2% storage footprint reduction** (~2.9 GB raw equivalent compressed to ~430.7 MB GeoParquet).
-
-### C. Explicit Labeling of Simulated Baselines
-- Applied `<span class="badge badge-simulated">Simulated Baselines</span>` to interstate comparison hubs (**Latrobe Valley in VIC, Collie in WA, Gladstone in QLD**) and added an explanatory callout distinguishing national modeled reference baselines from measured high-resolution Hunter micro-siting setbacks.
-
-### D. Exposing High-Value Technical Content & Equations
-- Embedded formatted Spatial SQL snippets:
-  - Net developable area mask with `ST_Difference` and `ST_Union_Aggr`.
-  - Geodesic distance joins with `ST_Distance` and `ST_Transform` (`EPSG:4326` to `EPSG:7856`).
-- Embedded the mathematical **4-Factor MCDA Formula**:
-  $$\text{Suitability} = 0.40 \cdot S_{\text{power}} + 0.25 \cdot S_{\text{sensitive}} + 0.20 \cdot S_{\text{water}} + 0.15 \cdot S_{\text{size}}$$
-- Embedded the continuous sigmoidal acoustic setback equation:
-  $$S_{\text{sensitive}}(d) = \frac{1}{1 + e^{-0.01 \cdot (d - 500)}}$$
-- Formatted the 4 pillars of Wherobots query performance (Zero-Scan Metadata Pruning, Hilbert Clustering, Vectorized Memory Execution, and Parallel Distributed Joins).
-
-### E. Engineering Efficiencies & Incremental Spatial Processing
-- Added a dedicated section breaking down how cloud spatial costs can be systematically minimized:
-  - **Decoupled Geometric vs. Scoring Tiers:** Never re-running heavy topological joins / buffers when only tuning MCDA weights or sigmoidal curve steepness.
-  - **Source Data Fingerprinting & Memoization:** Bypassing unchanged authoritative layers via ETags and GeoParquet hashes.
-  - **Delta Partition Processing:** Using Iceberg time-travel to isolate modified parcels (`ST_Changes`).
-  - **Zero-Cost Client Compute Offloading:** Executing What-If sensitivity tests 100% in-browser via JavaScript and DuckDB-WASM ($0.00 cloud cost).
-  - **Cost Impact:** Lowers continuous CI/CD development costs from ~$36 AUD down to **< $5 AUD**.
-
-### F. Author Roadmap & Open-Source GeoLibre Integration
-- Explicitly marked future development as **Author Roadmap**, not current shipped Wherobots features.
-- Clarified the **GeoLibre** (`opengeos/GeoLibre`) integration, zero-duplication cloud storage, DuckDB-WASM execution, and Google Cloud Gemini API integration.
+The updates connect the repository's cloud-native spatial capabilities directly to the national discourse on AI data centre regulation, energy grid protection, potable water security, housing non-competition, and regional just transition.
 
 ---
 
-## 2. GeoLibre + GCP + Wherobots Network Diagram Specification
+## Key Assets & Documentation Created / Updated
 
-To generate visual network diagrams or architectural infographics for the blog post, the system is designed around three distinct tiers:
+| File | Status | Description & Purpose |
+| :--- | :--- | :--- |
+| [`README.md`](file:///c:/Projects/hunter_spatial_crafter/README.md) | **Updated** | Rebranded project to **AuraSiting Crafter**, established the core story arc from local council curiosity to national 8-jurisdiction scale, and indexed all strategic and interactive assets. |
+| [`docs/linkedin_article_1_submitted.md`](file:///c:/Projects/hunter_spatial_crafter/docs/linkedin_article_1_submitted.md) | **Preserved** | Article 1: *Building a Cloud-Native Regional Spatial Siting Engine with Apache Sedona & Wherobots Cloud* (submitted technical article). |
+| [`docs/linkedin_article_2_national_siting_puzzle.md`](file:///c:/Projects/hunter_spatial_crafter/docs/linkedin_article_2_national_siting_puzzle.md) | **Created** | Article 2: *From a Local Council Proposal to a National Evidence Base: How I Built AuraSiting Crafter to Solve the AI Siting Puzzle* (authored by George Chandeep Corea; connects directly to the ABC News Daily podcast and National Cabinet debate). |
+| [`docs/wherobots_ai_data_center_suitability_blog.html`](file:///c:/Projects/hunter_spatial_crafter/docs/wherobots_ai_data_center_suitability_blog.html) | **Updated** | Modern HTML partner technical blog showcasing the 4.92M geometries / 200.6s execution, 85.2% storage compression, Spatial SQL snippets, and zero-cost client sandbox. |
+| [`docs/strategic_briefing_multi_persona.md`](file:///c:/Projects/hunter_spatial_crafter/docs/strategic_briefing_multi_persona.md) | **Created** | Multi-perspective strategic briefing with interactive "I am a..." lens for State Planners (DPHI), Federal Regulators (PM&C Office of AI), Hyperscale Investors, and Regional Communities. |
+| [`docs/ai_speech_discourse_alignment_plan.md`](file:///c:/Projects/hunter_spatial_crafter/docs/ai_speech_discourse_alignment_plan.md) | **Updated** | Strategic alignment plan with neutral policy presets (*Net-Zero Grid Optimization*, *Maximum Community & Water Protection*, *Regional Brownfield Priority*, *Balanced National Baseline*). |
 
-```mermaid
-flowchart TB
-    subgraph DataTier["1. Central Cloud Spatial Storage (Zero Duplication)"]
-        S3["Cloud Object Storage (S3 / GCS)\ns3://wherobots-cloud-us-west-2/org_ltq5l3obgb/fgsdb/"]
-        GP["• Suitability GeoParquet (Hilbert Partitioned)\n• PMTiles Vector Layers\n• Havasu Spatial Iceberg Manifests"]
-        S3 --- GP
-    end
+---
 
-    subgraph ComputeTier["2. Heavy Distributed Spatial Compute (Wherobots)"]
-        WB["Wherobots Cloud Engine\n(Apache Sedona on Spark)"]
-        ETL["• 15.91M National Geometries Ingestion\n• Topological Buffering & Difference\n• 2.4s Spatial Joins (Vectorized WKB)\n• Automatic Cluster Teardown"]
-        WB --- ETL
-        ETL -->|"Writes GeoParquet & PMTiles"| S3
-    end
+## Strategic Framework Alignment
 
-    subgraph ServerlessTier["3. Serverless AI Gateway (Google Cloud Platform)"]
-        CR["GCP Cloud Run (Scale-to-Zero Container)"]
-        FAST["FastAPI Spatial AI Proxy"]
-        GEMINI["Google Gemini API (Generative Spatial SQL)"]
-        OR["OpenRouter Client (BYOK Optional Tier)"]
-        CR --- FAST
-        FAST <-->|"Translates Prompts to DuckDB SQL"| GEMINI
-        FAST <-->|"Optional Models (Claude/GPT-4o)"| OR
-    end
-
-    subgraph ClientTier["4. End-User Browser Client (Zero Server Cost)"]
-        WEB["GeoLibre / Map-in-a-Box Web App\n(Static HTML / JS on CDN)"]
-        WASM["DuckDB-WASM Engine\n(In-Browser SQL Execution)"]
-        SANDBOX["Real-Time MCDA What-If Sandbox\n(<1ms Re-scoring in JS)"]
-        CHAT["AI Spatial Chat Drawer ('Ask AI')"]
-        
-        WEB --- WASM
-        WEB --- SANDBOX
-        WEB --- CHAT
-    end
-
-    %% Network flows
-    CHAT -->|"1. Natural Language Prompt"| FAST
-    FAST -->|"2. Generated DuckDB SQL Query"| WASM
-    WASM -->|"3. HTTP Byte-Range Requests (No Full Downloads)"| GP
-    GP -->|"4. Fetched Parquet Row Groups"| WASM
-    WASM -->|"5. Instant Visualisation on Map & Leaderboard"| WEB
-
-    classDef tierStyle fill:#111827,stroke:#3b82f6,stroke-width:2px,color:#f3f4f6;
-    classDef storageStyle fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f3f4f6;
-    classDef computeStyle fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f3f4f6;
-    classDef clientStyle fill:#1f2937,stroke:#38bdf8,stroke-width:2px,color:#f3f4f6;
-    classDef gcpStyle fill:#431407,stroke:#fb923c,stroke-width:2px,color:#f3f4f6;
-
-    class DataTier storageStyle;
-    class ComputeTier computeStyle;
-    class ServerlessTier gcpStyle;
-    class ClientTier clientStyle;
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 AuraSiting Crafter                                     │
+│                The Australian Regional & AI Infrastructure Siting Engine               │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ • Power & Former Industrial Assets (40%): Direct HV grid tie & retired coal sub-stations│
+│ • Sensitive Community Protection (25%): 300m-1,000m acoustic buffers from schools/homes│
+│ • Recycled Water Circuits (20%): Exclusively non-potable WWTP effluent cooling         │
+│ • True Net Developable Space (15%): Automated clipping of flood, slope & hazard zones  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Key Architectural Principles of the Network Diagram
+## Verification & Integrity Check
 
-1. **Zero-Duplication Unified Data Layer**:
-   - Wherobots Cloud computes heavy spatial joins once and writes optimized **GeoParquet** and **PMTiles** directly to central cloud storage (S3 / GCS).
-   - Neither GCP web servers nor the user browser ever maintain a full duplicate copy of the dataset.
-
-2. **HTTP Range-Request In-Browser Compute**:
-   - The user browser runs **DuckDB-WASM**, executing spatial SQL queries by reading only specific byte ranges from cloud storage via standard HTTP `Range:` headers.
-   - Eliminates multi-gigabyte downloads on client devices and eliminates expensive server-side NVMe disk caching.
-
-3. **Dual-Cloud Cost & Performance Optimization**:
-   - **Wherobots Cloud (AWS us-west-2)**: Powers distributed heavy spatial computing (Apache Sedona, Havasu metadata pruning, spatial cross-joins). Runtimes auto-stop immediately upon completion to avoid idle charges.
-   - **Google Cloud Platform (GCP Cloud Run)**: Powers the scale-to-zero serverless AI translation proxy connected to Google Gemini (high free tier, zero baseline running cost).
-
-4. **Conversational "Ask AI" Flow**:
-   - **User Input:** Natural language question in the chat drawer (e.g. *"Find candidate sites in VIC >10 ha within 2km of 330kV lines and >1km from schools"*).
-   - **AI Translation (Cloud Run + Gemini):** Generates clean DuckDB Spatial SQL querying the remote GeoParquet URL with byte-range filtering.
-   - **In-Browser Execution (DuckDB-WASM):** Executes in milliseconds in the browser, instantly highlighting matching parcels on the map and updating the leaderboard.
+1. **Repository Structure**: All files are persisted in `docs/` and `runner/` according to workspace rules.
+2. **Branding Consistency**: `AuraSiting Crafter` and George Chandeep Corea authorship are consistently reflected across all public and technical documents.
+3. **Compute Safety**: No cloud runtimes, interactive Wherobots clusters, or background Spark sessions remain active ($0.00 compute incurred).
