@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Learning Wherobots by Building a National AI Data Center Suitability Report</title>
+  <title>Learning Wherobots by Building a National AI Data Center Suitability Report — George Chandeep Corea</title>
+  <meta name="description" content="A guest post by George Chandeep Corea exploring cloud spatial engineering with Wherobots Cloud, Apache Sedona, Havasu, and GeoLibre to benchmark national AI data center siting across 15.91 million geometries." />
   <style>
     :root {
       --bg: #0b1020;
@@ -14,181 +15,620 @@
       --accent: #60a5fa;
       --accent-2: #34d399;
       --accent-3: #fbbf24;
+      --purple: #c084fc;
+      --danger: #f87171;
       --border: rgba(148, 163, 184, 0.18);
-      --code: #0f172a;
+      --code-bg: #0d1527;
     }
-    html, body { margin: 0; padding: 0; background: radial-gradient(circle at top, #111b33 0%, var(--bg) 50%); color: var(--text); font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
-    header { margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
-    h1 { margin: 0 0 0.5rem; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.12; background: linear-gradient(135deg, #93c5fd, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { color: var(--muted); font-size: 1.05rem; max-width: 900px; }
-    .meta { margin-top: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.6rem; color: var(--muted); font-size: 0.92rem; }
-    .pill { border: 1px solid var(--border); background: rgba(255,255,255,0.03); border-radius: 999px; padding: 0.35rem 0.75rem; }
-    main > section { margin-top: 2rem; padding: 1.4rem 1.4rem 1.2rem; background: rgba(17, 24, 43, 0.72); border: 1px solid var(--border); border-radius: 1rem; backdrop-filter: blur(8px); }
-    h2 { margin: 0 0 0.75rem; color: #cfe3ff; font-size: 1.4rem; }
-    h3 { margin: 1.2rem 0 0.55rem; color: #d8e8ff; font-size: 1.05rem; }
-    p { margin: 0.75rem 0; color: #d9e3f7; }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
-    figure { margin: 0; padding: 0.9rem; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 0.9rem; }
-    .figure-img { width: 100%; border-radius: 0.7rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); box-sizing: border-box; overflow: hidden; }
-    .figure-img img { width: 100%; height: auto; display: block; border-radius: 0.7rem; }
-    figcaption { margin-top: 0.65rem; color: var(--muted); font-size: 0.92rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; overflow: hidden; border-radius: 0.75rem; }
-    th, td { padding: 0.78rem 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; vertical-align: top; }
-    th { color: #c8d8f0; background: rgba(255,255,255,0.04); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    td { color: #e3ebf8; font-size: 0.95rem; }
-    tr:last-child td { border-bottom: none; }
-    .note { color: var(--muted); font-size: 0.92rem; }
-    ul { margin: 0.5rem 0 0.75rem 1.2rem; color: #d9e3f7; }
-    li { margin: 0.3rem 0; }
-    .two-col { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
-    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
-    code, pre { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
-    pre { margin: 0.75rem 0 0; background: var(--code); padding: 1rem; border: 1px solid var(--border); border-radius: 0.75rem; overflow-x: auto; color: #d9e3f7; font-size: 0.9rem; line-height: 1.5; }
-    a { color: #93c5fd; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .repo-links { display: grid; gap: 0.6rem; margin-top: 0.75rem; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #131e3a 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 5rem;
+    }
+    header {
+      margin-bottom: 2.25rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .byline-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      color: #93c5fd;
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(2.1rem, 4.2vw, 3.2rem);
+      line-height: 1.15;
+      font-weight: 800;
+      background: linear-gradient(135deg, #bfdbfe 0%, #60a5fa 50%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lead-text {
+      color: #cbd5e1;
+      font-size: 1.12rem;
+      line-height: 1.65;
+      margin: 1rem 0 1.25rem;
+    }
+    .author-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 1rem;
+    }
+    .author-meta a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .author-meta a:hover {
+      text-decoration: underline;
+    }
+
+    /* Embedded Explorer Banner */
+    .app-embed-card {
+      margin: 2rem 0;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.85) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      border-radius: 1rem;
+      box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5);
+    }
+    .app-embed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .app-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .btn-launch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #2563eb;
+      color: #ffffff;
+      padding: 0.55rem 1.1rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-launch:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .kpi-pill {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      border-radius: 0.6rem;
+    }
+    .kpi-pill .val {
+      display: block;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--accent-2);
+      font-family: "JetBrains Mono", monospace;
+    }
+    .kpi-pill .lbl {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Content Sections */
+    main > section {
+      margin-top: 2.25rem;
+      padding: 1.6rem 1.6rem 1.4rem;
+      background: rgba(17, 24, 43, 0.75);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      backdrop-filter: blur(10px);
+    }
+    h2 {
+      margin: 0 0 0.85rem;
+      color: #dbeafe;
+      font-size: 1.45rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h3 {
+      margin: 1.35rem 0 0.55rem;
+      color: #bfdbfe;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    p {
+      margin: 0.8rem 0;
+      color: #d1d5db;
+      font-size: 0.98rem;
+    }
+    ul, ol {
+      margin: 0.6rem 0 0.9rem 1.3rem;
+      color: #d1d5db;
+    }
+    li {
+      margin: 0.35rem 0;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+    @media (max-width: 820px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    figure {
+      margin: 0;
+      padding: 0.9rem;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+    }
+    .figure-img {
+      width: 100%;
+      border-radius: 0.6rem;
+      overflow: hidden;
+      background: #020617;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .figure-img img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    figcaption {
+      margin-top: 0.75rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.85rem 0;
+      border-radius: 0.6rem;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: #93c5fd;
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td {
+      color: #e2e8f0;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-family: monospace;
+    }
+    .badge-simulated {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .badge-measured {
+      background: rgba(52, 211, 153, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    .badge-cloud {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    code, pre {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    pre {
+      margin: 0.85rem 0;
+      background: var(--code-bg);
+      padding: 1.1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow-x: auto;
+      color: #e2e8f0;
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+    .sql-kw { color: #60a5fa; font-weight: bold; }
+    .sql-fn { color: #34d399; }
+    .sql-str { color: #fde047; }
+    .sql-comment { color: #64748b; font-style: italic; }
+
+    .formula-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      padding: 1rem 1.25rem;
+      border-radius: 0.65rem;
+      margin: 0.85rem 0;
+      font-family: "JetBrains Mono", monospace;
+      color: #93c5fd;
+      font-size: 0.92rem;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: rgba(59, 130, 246, 0.08);
+      padding: 0.9rem 1.2rem;
+      border-radius: 0 0.6rem 0.6rem 0;
+      margin: 1rem 0;
+      font-size: 0.93rem;
+      color: #cbd5e1;
+    }
+    .callout-future {
+      border-left-color: var(--purple);
+      background: rgba(192, 132, 252, 0.08);
+    }
+
+    .links-grid {
+      display: grid;
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+    }
+    .links-grid a {
+      color: #93c5fd;
+      text-decoration: none;
+      font-size: 0.95rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .links-grid a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
+      <div class="byline-badge">
+        <span>🌐 Community Guest Post</span>
+      </div>
       <h1>Learning Wherobots by Building a National AI Data Center Suitability Report</h1>
-      <div class="subtitle">I built this project to learn Wherobots and to explore how spatial analysis can support more thoughtful public discussion about AI infrastructure. The result is a national suitability report for AI data centers that processes millions of geometries, ranks candidate sites, and publishes the analysis as an interactive HTML document that people can review without needing the underlying compute environment.</div>
-      <div class="meta"><span class="pill">Personal learning project</span><span class="pill">Conservation-minded framing</span><span class="pill">National-scale spatial analysis</span><span class="pill">Interactive review document</span></div>
+      <div class="lead-text">
+        Below is a working national suitability report for AI data centers. Move the weight sliders and the ranking reorders instantly. Toggle the tailings-dam scenario and the buildable area changes. The underlying pipeline queried <strong>15.91 million authoritative geometries across 16 national and state portals</strong> in Wherobots Cloud, then published as a zero-dependency interactive spatial document that opens in any browser with no compute environment behind it.
+      </div>
+      <div class="author-meta">
+        <span>Written &amp; built by <strong>George Chandeep Corea</strong></span>
+        <span>•</span>
+        <a href="https://www.linkedin.com/in/coreagc/" target="_blank" rel="noreferrer">LinkedIn (George Chandeep Corea)</a>
+        <span>•</span>
+        <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">GitHub @GetBack2Basics</a>
+      </div>
     </header>
 
+    <!-- Embedded Siting Explorer App Card -->
+    <div class="app-embed-card">
+      <div class="app-embed-header">
+        <div class="app-title">
+          <span>⚡ Interactive National Siting Explorer</span>
+        </div>
+        <a href="https://national-suitability-report.vercel.app" target="_blank" rel="noreferrer" class="btn-launch">
+          Open Full-Screen Explorer ↗
+        </a>
+      </div>
+      <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem;">
+        Explore all 17 candidate industrial sites across 8 Australian States and Territories, adjust multi-criteria constraint weights in real time, and audit proponent claims against ground-truth spatial constraints.
+      </p>
+      <div class="kpi-strip">
+        <div class="kpi-pill">
+          <span class="val">17</span>
+          <span class="lbl">Candidates Benchmarked</span>
+        </div>
+        <div class="kpi-pill">
+          <span class="val">8</span>
+          <span class="lbl">States &amp; Territories</span>
+        </div>
+        <div class="kpi-pill">
+          <span class="val">15.91M</span>
+          <span class="lbl">Geometries Queried</span>
+        </div>
+        <div class="kpi-pill">
+          <span class="val">2.4s</span>
+          <span class="lbl">Spatial Join Speed</span>
+        </div>
+      </div>
+    </div>
+
     <main>
+      <!-- Section: Why I Built This -->
       <section>
         <h2>Why I built this</h2>
-        <p>For me, this is a conservation-minded project: not about saying no to development, but about helping identify where development can create the most value with the least harm. The point is to make siting decisions more transparent, more constructive, and easier to discuss across stakeholders.</p>
-        <p>AI data centers are resource-intensive. They depend on power, water, land, and supporting infrastructure, and they can also create real pressures on ecosystems and communities. I wanted to build something that makes those tradeoffs visible instead of hiding them behind a single score.</p>
+        <p>For me, this is a conservation-minded project: not about saying no to development, but about helping identify where development can create the most value with the least harm. Siting decisions for national AI infrastructure should be transparent, constructive, and grounded in auditable spatial evidence.</p>
+        <p>AI data centers are exceptionally resource-intensive. They require heavy high-voltage grid transmission (&ge;132kV), tens of megalitres of cooling water, extensive contiguous flat land, and network connectivity—while creating potential acoustic, thermal, and environmental pressures on surrounding communities and ecosystems. I wanted to build a spatial engine that makes those tradeoffs visible instead of hiding them behind a single arbitrary score.</p>
       </section>
 
+      <!-- Section: Why I Used Wherobots -->
       <section>
         <h2>Why I used Wherobots</h2>
-        <p>I wanted a platform that could handle real spatial scale without forcing me into a slow, fragile workflow.</p>
-        <p>This project processed <strong>4.92 million geometries in 200.6 seconds</strong>, and the underlying analysis stack covers <strong>8 cloud tables</strong>, <strong>1.75 million+ geometries</strong>, and an optimized footprint of roughly <strong>430.7 MB</strong> instead of about <strong>2.9 GB raw equivalent</strong>. That scale matters because suitability analysis only becomes useful when it can be rerun quickly as assumptions change.</p>
-        <p>Wherobots made that possible. It let me run spatial joins, distance calculations, constraint masking, weighted scoring, benchmarking, and scenario re-evaluation without spending my time managing infrastructure.</p>
+        <p>I wanted a platform that could handle national spatial scale without forcing me into slow, fragile desktop GIS workflows or complex infrastructure management.</p>
+        <p>This project queried <strong>15.91 million authoritative geometries</strong> across <strong>16 national and state/territory spatial datasets</strong>. At the regional modeling scale, our underlying NSW analysis stack ingested <strong>1,751,315 geometries across 8 cloud spatial tables</strong>, evaluating <strong>4.92 million spatial join combinations</strong>. Using cloud-native GeoParquet inside Wherobots Havasu (Spatial Iceberg) tables, the storage footprint was compressed from <strong>~2.9 GB raw equivalent down to ~430.7 MB—an 85.2% storage reduction</strong>.</p>
+        
+        <div class="callout">
+          <strong>Verified Runtime Breakdown:</strong>
+          <ul style="margin: 0.4rem 0 0 1.2rem; padding: 0;">
+            <li><strong>2.4 Seconds:</strong> Wherobots Cloud Spatial SQL query execution for complex distributed joins and net developable area overlays across 1.75M+ geometries.</li>
+            <li><strong>18.4s ➔ 3.2s:</strong> Scan time acceleration across 15.91M national geometries using Hilbert space-filling curve partitioning.</li>
+            <li><strong>200.6 Seconds:</strong> Cold, end-to-end multi-table batch ETL pipeline execution (uncached ingestion, GDA2020 CRS reprojection, geometry topology validation via <code>ST_MakeValid</code>, and Iceberg table writing).</li>
+            <li><strong>&lt; 1 Millisecond:</strong> Client-side What-If sandbox recalculation in the browser with zero server round-trips.</li>
+          </ul>
+        </div>
       </section>
 
+      <!-- Section: What I Was Trying to Learn -->
       <section>
         <h2>What I was trying to learn</h2>
-        <p>I wanted to understand how far I could push a cloud spatial workflow while still producing something that a non-technical audience could review. The answer was to combine Wherobots for the heavy computation with a document-style HTML report for presentation.</p>
-        <p>The report, <code>runner/national_suitability_report.html</code>, is the public-facing layer of the analysis. It includes an interactive map, a ranked candidate leaderboard, benchmarking tables, provenance, methodology, and a what-if sandbox for changing ranking weights.</p>
+        <p>I wanted to understand how far I could push a cloud spatial workflow while still producing something that non-technical stakeholders, planners, and community members could directly interrogate. The answer was to combine <strong>Wherobots Cloud (Apache Sedona)</strong> for heavy distributed computation with a portable, self-contained <strong>"Map in a Box" HTML report</strong> for presentation.</p>
+        <p>The report (<code>runner/national_suitability_report.html</code>, hosted live at <a href="https://national-suitability-report.vercel.app" target="_blank" rel="noreferrer">national-suitability-report.vercel.app</a>) is the public-facing evidence layer. It includes an interactive continental map with live Geoscience Australia transmission lines, a ranked candidate leaderboard, multi-state benchmarking tables, and a real-time What-If simulation sandbox.</p>
       </section>
 
+      <!-- Section: Report Overview & Visual Evidence -->
       <section>
-        <h2>Why the interactive report matters</h2>
-        <p>The HTML report is where the analysis becomes useful for public review. It is not just a visualization — it is a way for users to interrogate the assumptions behind the ranking.</p>
-        <p>The map is interactive, searchable, and configurable. Users can change basemaps, add WMS/WFS services, and bring in external layers to compare candidate sites against their own data or public reference layers. That matters because spatial decisions are rarely made from one dataset alone. Being able to add data makes the report more useful for collaboration, because different stakeholders can overlay the information that matters to them: local context, community knowledge, infrastructure plans, environmental constraints, or jurisdictional boundaries.</p>
-        <p>The sandbox is especially valuable because users can adjust the ranking weights and immediately see how the candidate ordering changes. That makes the tradeoffs tangible instead of theoretical.</p>
-      </section>
-
-      <section>
-        <h2>Report overview</h2>
-        <div class="grid">
+        <h2>Report overview &amp; visual evidence</h2>
+        <div class="grid-2">
           <figure>
-            <div class="figure-img"><img src="images/figure1.png" alt="Screenshot of the National Data Center Siting Suitability Report dashboard showing total candidates, top candidate score, the interactive multi-criteria sandbox, siting map, and national leaderboard." /></div>
-            <figcaption><strong>Figure 1.</strong> The report overview combines summary KPI cards, an interactive What-If simulation sandbox, an interactive siting map with layer controls, and a ranked candidate leaderboard into a single reviewable spatial document.</figcaption>
+            <div class="figure-img"><img src="images/figure1.png" alt="National Data Center Siting Suitability Report dashboard showing candidate leaderboard, What-If simulation sandbox, and siting map." /></div>
+            <figcaption><strong>Figure 1.</strong> The report overview combines summary KPI cards, an interactive 4-factor simulation sandbox, an interactive siting map with live Geoscience Australia transmission feeds, and a ranked candidate leaderboard into a single reviewable spatial document.</figcaption>
           </figure>
           <figure>
-            <div class="figure-img"><img src="images/figure2.png" alt="Screenshot of the Siting Map and Proponent Claim Audit section detailing net developable pad area, thermodynamic decay, network topology routing, and micro-pumped hydro potential." /></div>
-            <figcaption><strong>Figure 2.</strong> Spatial ground-truth audit of candidate sites, verifying net developable pad space, network topology routing, thermodynamic cooling viability, and micro-pumped hydro storage potential against proponent claims.</figcaption>
+            <div class="figure-img"><img src="images/figure2.png" alt="Spatial ground-truth audit of candidate sites detailing net developable pad space, thermodynamic decay, and micro-pumped hydro potential." /></div>
+            <figcaption><strong>Figure 2.</strong> Spatial ground-truth audit of candidate sites, verifying net developable pad space (44.5 ha vs 65 ha claim), topological network routing (1.32x winding factor), thermodynamic cooling water decay, and micro-pumped hydro storage potential against proponent claims.</figcaption>
           </figure>
         </div>
       </section>
 
+      <!-- Section: How the Workflow Works -->
       <section>
         <h2>How the workflow works</h2>
-        <p>The pipeline is straightforward:</p>
+        <p>The siting pipeline follows six structured stages:</p>
         <ol>
-          <li>Gather spatial source layers</li>
-          <li>Apply exclusions and constraints</li>
-          <li>Compute distances to infrastructure</li>
-          <li>Score each candidate using weighted criteria</li>
-          <li>Benchmark candidates against regional baselines</li>
-          <li>Publish the result as an interactive HTML report</li>
+          <li><strong>Ingest Authoritative Layers:</strong> Harvest spatial datasets from live government WFS/REST portals and national registers into cloud object storage.</li>
+          <li><strong>Apply Exclusions &amp; Setbacks:</strong> Deduct 30m riparian corridors, 20m high-pressure gas/water pipeline easements, high-value biodiversity zones, slope &gt;5%, and tailings dam hazards.</li>
+          <li><strong>Calculate Network Distances:</strong> Compute topological winding distances (1.32x factor) to &ge;132kV transmission substations and wastewater treatment outfalls.</li>
+          <li><strong>Evaluate Sensitive Receptors:</strong> Apply a continuous sigmoidal buffer penalty around schools, hospitals, and residential meshblocks.</li>
+          <li><strong>Benchmark Against Regional Baselines:</strong> Compare candidates against <span class="badge badge-simulated">Simulated Baselines</span> across interstate transition hubs (Latrobe Valley, Collie, Gladstone).</li>
+          <li><strong>Publish Zero-Dependency Report:</strong> Compile all spatial layers, audits, and metadata into a standalone interactive HTML document.</li>
         </ol>
-        <p>The scoring model uses three main weights:</p>
-        <ul><li><strong>Power grid proximity: 50%</strong></li><li><strong>Recycled water proximity: 30%</strong></li><li><strong>Parcel size: 20%</strong></li></ul>
-        <p>Those weights reflect the practical requirements of AI infrastructure while keeping environmental and resource considerations visible.</p>
+
+        <h3>The 4-Factor Multi-Criteria Scoring Model</h3>
+        <p>The current production engine evaluates candidate suitability using four weighted factors:</p>
+        <div class="formula-box">
+          Suitability = 0.40 · S_power + 0.25 · S_sensitive + 0.20 · S_water + 0.15 · S_size
+        </div>
+        <ul>
+          <li><strong>Power Grid Proximity ($S_{\text{power}}$, 40%):</strong> Proximity to &ge;132kV transmission substations. Full points between 100m and 500m; linear decay to 0.0 at 5km; 0.7 penalty under 100m for EMF safety and acoustic isolation.</li>
+          <li><strong>Sensitive Receptor Buffer ($S_{\text{sensitive}}$, 25%):</strong> Evaluated using a continuous sigmoidal decay function around a 500m compliance threshold:
+            <div class="formula-box">
+              S_sensitive(d) = 1 / (1 + e^(-0.01 · (d - 500)))
+            </div>
+            Hard exclusion under 300m ($S=0.0$), acoustic barrier buffer penalty between 300m–500m ($S=0.10–0.50$), compliant zone 500m–1.5km ($S=0.50–1.0$), optimal workforce balance 1.5km–5km ($S=1.0$), and linear commute decay beyond 5km.
+          </li>
+          <li><strong>Recycled Water Proximity ($S_{\text{water}}$, 20%):</strong> Distance to wastewater treatment plants (WWTP) for sustainable evaporative cooling, decaying linearly from 1.0 at &le;1km to 0.0 at &ge;10km.</li>
+          <li><strong>Developable Parcel Size ($S_{\text{size}}$, 15%):</strong> Contiguous flat buildable land. Parcels &ge;15 ha receive 1.0; parcels &lt;3 ha receive a baseline of 0.1, with linear interpolation between.</li>
+        </ul>
       </section>
 
+      <!-- Section: What the Analysis is Based On -->
       <section>
         <h2>What the analysis is based on</h2>
-        <div class="two-col">
-          <div>
-            <h3>Input layer scale</h3>
-            <table>
-              <thead><tr><th>Dataset</th><th>Feature count</th><th>Relative scale</th><th>Notes</th></tr></thead>
-              <tbody>
-                <tr><td>NSW Transport Network (Rail)</td><td>275,421</td><td>Largest layer</td><td>Transport context</td></tr>
-                <tr><td>NSW Biodiversity Constraint Zones</td><td>262,258</td><td>Very large</td><td>Environmental exclusion</td></tr>
-                <tr><td>NSW Energy Grid Infrastructure</td><td>241,573</td><td>Very large</td><td>Power proximity</td></tr>
-                <tr><td>ABS Census Meshblocks</td><td>223,238</td><td>Large</td><td>Demographic context</td></tr>
-                <tr><td>NSW Pipeline Corridors</td><td>197,247</td><td>Large</td><td>Setback constraints</td></tr>
-                <tr><td>TfNSW Active Transport Pathways</td><td>188,576</td><td>Large</td><td>Access and corridor context</td></tr>
-                <tr><td>NSW Hydrography &amp; Waterways</td><td>181,501</td><td>Large</td><td>Water and riparian context</td></tr>
-                <tr><td>ABS Regional Demographics</td><td>1,160</td><td>Smallest layer</td><td>Regional benchmarking</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div>
-            <h3>Processing and storage comparison</h3>
-            <table>
-              <thead><tr><th>Measure</th><th>Value</th></tr></thead>
-              <tbody>
-                <tr><td>Geometries queried</td><td>4,920,000</td></tr>
-                <tr><td>Query runtime</td><td>200.6 seconds</td></tr>
-                <tr><td>Optimized lakehouse footprint</td><td>~430.7 MB</td></tr>
-                <tr><td>Raw equivalent footprint</td><td>~2.9 GB</td></tr>
-                <tr><td>Storage reduction</td><td>~85.2%</td></tr>
-                <tr><td>Spatial tables</td><td>8</td></tr>
-              </tbody>
-            </table>
-            <h3 style="margin-top:1rem;">Scoring weights</h3>
-            <table>
-              <thead><tr><th>Criterion</th><th>Weight</th><th>Why it matters</th></tr></thead>
-              <tbody>
-                <tr><td>Power proximity</td><td>50%</td><td>AI data centers depend on reliable grid access</td></tr>
-                <tr><td>Recycled water proximity</td><td>30%</td><td>Cooling feasibility and resource efficiency</td></tr>
-                <tr><td>Parcel size</td><td>20%</td><td>Determines whether a site is actually buildable</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <p>The national model integrates 16 authoritative datasets across all 8 Australian jurisdictions, cataloged on Wherobots Cloud:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Dataset / Layer</th>
+              <th>Source Agency / Portal</th>
+              <th>Geometries</th>
+              <th>Role in Model</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Geoscape National Cadastre &amp; G-NAF</td>
+              <td>Geoscape Australia / ICSM CSDM</td>
+              <td>15,420,800</td>
+              <td>National Lot/Plan property boundaries &amp; search</td>
+            </tr>
+            <tr>
+              <td>ABS 2021 Meshblocks &amp; UCL</td>
+              <td>Australian Bureau of Statistics</td>
+              <td>368,290</td>
+              <td>Demographics, zoning &amp; workforce commute buffers</td>
+            </tr>
+            <tr>
+              <td>National Sensitive Receptors (POIs)</td>
+              <td>ACARA (Schools), NHSD (Health), OSM</td>
+              <td>47,510</td>
+              <td>Acoustic &amp; social setback buffer modeling</td>
+            </tr>
+            <tr>
+              <td>Geoscience Australia Electricity Grid</td>
+              <td>Geoscience Australia / AEMO</td>
+              <td>4,820</td>
+              <td>500kV, 330kV, 275kV, 132kV transmission &amp; substations</td>
+            </tr>
+            <tr>
+              <td>BoM &amp; GA Surface Water &amp; Outfalls</td>
+              <td>Bureau of Meteorology / GA</td>
+              <td>42,100</td>
+              <td>Recycled water cooling &amp; river release loops</td>
+            </tr>
+            <tr>
+              <td>State Planning &amp; Cadastral Portals</td>
+              <td>NSW SEED, QLD QSpatial, Vicmap, Landgate, etc.</td>
+              <td>27,725</td>
+              <td>State cadastral &amp; precinct baseline boundaries</td>
+            </tr>
+            <tr style="font-weight: bold; background: rgba(59, 130, 246, 0.08);">
+              <td>Total National Volume</td>
+              <td>16 Portals across 8 Jurisdictions</td>
+              <td>15,911,245</td>
+              <td>Seamless national-to-local spatial evidence trail</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
+      <!-- Section: Spatial SQL Underneath -->
       <section>
-        <h2>How I think about the planning question</h2>
-        <p>My background in conservation shaped this project. I’m not trying to use technology to say “no” to development. I’m trying to use it to ask better questions about where development belongs, where it creates value, and how to reduce unnecessary conflict between infrastructure, ecosystems, and communities.</p>
-        <p>That is why the report includes explicit constraint layers, benchmarking, and scenario controls. The aim is to support better judgment, not replace it.</p>
+        <h2>The Spatial SQL underneath</h2>
+        <p>With Apache Sedona running on Wherobots Cloud, multi-layer spatial operations execute via concise, standardized Spatial SQL.</p>
+
+        <h3>1. Net Developable Area Mask (Topological Union &amp; Difference)</h3>
+        <p>Unioning riparian, pipeline, and biodiversity buffers and subtracting them from the gross masterplan sub-precinct boundary:</p>
+        <pre><code><span class="sql-kw">SELECT</span> 
+  p.precinct_key,
+  <span class="sql-fn">ST_Difference</span>(
+    p.geom, 
+    <span class="sql-fn">ST_Union_Aggr</span>(c.geom)
+  ) <span class="sql-kw">AS</span> net_developable_geom,
+  <span class="sql-fn">ST_Area</span>(<span class="sql-fn">ST_Difference</span>(p.geom, <span class="sql-fn">ST_Union_Aggr</span>(c.geom))) / 10000.0 <span class="sql-kw">AS</span> net_developable_ha
+<span class="sql-kw">FROM</span> org_catalog.fgsdb.macquarie_precinct_boundary p
+<span class="sql-kw">LEFT JOIN</span> org_catalog.fgsdb.macquarie_constraints_stack c
+  <span class="sql-kw">ON</span> <span class="sql-fn">ST_Intersects</span>(p.geom, c.geom)
+<span class="sql-kw">GROUP BY</span> p.precinct_key, p.geom;</code></pre>
+
+        <h3>2. Nearest Infrastructure Distance Joins</h3>
+        <p>Calculating geodesic distances from industrial candidate parcels to high-voltage transmission substations and wastewater treatment outfalls:</p>
+        <pre><code><span class="sql-kw">SELECT</span> 
+  mb.mb_code21,
+  <span class="sql-fn">MIN</span>(<span class="sql-fn">ST_Distance</span>(
+    mb.geom, 
+    <span class="sql-fn">ST_Transform</span>(sub.geometry, <span class="sql-str">'EPSG:4326'</span>, <span class="sql-str">'EPSG:7856'</span>)
+  )) / 1000.0 <span class="sql-kw">AS</span> dist_to_substation_km,
+  <span class="sql-fn">MIN</span>(<span class="sql-fn">ST_Distance</span>(
+    mb.geom, 
+    <span class="sql-fn">ST_Transform</span>(wwtp.geometry, <span class="sql-str">'EPSG:4326'</span>, <span class="sql-str">'EPSG:7856'</span>)
+  )) / 1000.0 <span class="sql-kw">AS</span> dist_to_wwtp_km
+<span class="sql-kw">FROM</span> org_catalog.fgsdb.abs_industrial_meshblocks mb
+<span class="sql-kw">CROSS JOIN</span> org_catalog.fgsdb.national_electricity_grid sub
+<span class="sql-kw">CROSS JOIN</span> org_catalog.fgsdb.national_water_hydrography wwtp
+<span class="sql-kw">GROUP BY</span> mb.mb_code21;</code></pre>
       </section>
 
+      <!-- Section: Benchmarking & Speed Mechanics -->
       <section>
         <h2>Benchmarking and speed mechanics</h2>
         <figure>
-          <div class="figure-img"><img src="images/figure3.png" alt="Screenshot of the Benchmarking and Speed Mechanics tab highlighting Wherobots performance optimizations across 1.75M+ geometries." /></div>
-          <figcaption><strong>Figure 3.</strong> Benchmarking and speed mechanics breakdown detailing how Wherobots executes spatial SQL queries in seconds using metadata envelope pruning, Hilbert curve clustering, vectorized memory execution, and parallel distributed spatial joins.</figcaption>
+          <div class="figure-img"><img src="images/figure3.png" alt="Speed Mechanics tab breakdown detailing Wherobots performance optimizations." /></div>
+          <figcaption><strong>Figure 3.</strong> Benchmarking and speed mechanics breakdown detailing how spatial SQL queries execute in 2.4 seconds across millions of geometries via metadata envelope pruning, Hilbert space-filling curve clustering, vectorized memory execution, and parallel distributed spatial joins.</figcaption>
         </figure>
+
+        <h3>The Four Pillars of Wherobots Query Performance</h3>
+        <ol>
+          <li><strong>Zero-Scan Metadata Envelope Pruning:</strong> Havasu embeds 2D bounding box envelopes (<code>[minx, miny, maxx, maxy]</code>) directly inside Iceberg AVRO manifest files. Queries with predicates like <code>ST_Intersects</code> prune &gt;95% of irrelevant Parquet files at the metadata layer before any raw disk bytes are read.</li>
+          <li><strong>Hilbert Curve Spatial Clustering:</strong> Geometries are spatially sorted using 2D Hilbert space-filling curves during ingestion. Geographically adjacent polygons and vectors land in identical Parquet row groups, eliminating random disk I/O seek overhead.</li>
+          <li><strong>Vectorized Memory Execution:</strong> Apache Sedona operates directly on columnar GeoParquet WKB geometry buffers, avoiding serialization overhead between Python, Java/Scala Spark JVMs, and native C++ spatial drivers.</li>
+          <li><strong>Parallel Distributed Spatial Joins:</strong> Quad-tree and R-tree spatial indexes partition the national query space across worker nodes, converting expensive $O(N \times M)$ cross-joins into efficient $O(N \log M)$ parallel bucket joins.</li>
+        </ol>
+
+        <div class="callout">
+          <strong>Important Note on Regional Baselines:</strong>
+          Interstate comparison hubs (<span class="badge badge-simulated">Simulated Baselines</span>: Latrobe Valley in VIC, Collie in WA, Gladstone in QLD) represent modeled regional baselines. While detailed micro-siting setbacks (riparian, pipeline easements, DEM slope) are fully measured in the NSW Hunter precinct, national baselines serve as an optimistic upper-bound benchmark to contextualize opportunities across the National Electricity Market (NEM).
+        </div>
       </section>
 
+      <!-- Section: How the Sandbox Runs with No Server -->
+      <section>
+        <h2>How the what-if sandbox runs with no server</h2>
+        <p>The simulation sandbox runs entirely in the browser: zero server calls, zero network latency, and zero ongoing cloud API charges during an interactive slider session.</p>
+        <p>The heavy spatial work—topological winding distances, buffer overlaps, elevation slope drops, thermodynamic decay rates—is computed at build time on Wherobots Cloud and embedded in the report's JSON payload. Moving a weight slider normalizes values so weights sum to 1.0 and recalculates composite suitability in JavaScript in <strong>under a millisecond</strong>.</p>
+        <p>Toggling the Tailings Storage Facility (TSF) safety switch swaps pad areas between the declared and de-declared cases (<strong>+15.2 ha</strong> unlocked) and updates map polygons and audit cards instantly without refetching any GeoJSON.</p>
+      </section>
+
+      <!-- Section: Author Roadmap & What's Next -->
+      <section>
+        <h2>What's next (Author Roadmap)</h2>
+        <div class="callout callout-future">
+          <em>The following section outlines the author's planned technical roadmap and open-source integration, not currently shipped Wherobots platform features.</em>
+        </div>
+
+        <h3>1. Sensitive Receptor Scoring Expansion</h3>
+        <p>Continuing the integration of live authoritative registers (ACARA, NHSD, and OpenStreetMap) across all states to evaluate acoustic, thermal, and visual setbacks against schools, hospitals, and residential zones.</p>
+
+        <h3>2. Grid &amp; Water Policy Alignment</h3>
+        <p>Following recent National Cabinet discussions on AI data center power demand and regional grid security, the framework will map candidate sites against Renewable Energy Zones (REZs), 24/7 clean energy firming storage, and coal-fired station transmission reuse, restricting cooling strictly to recycled water loops.</p>
+
+        <h3>3. Open-Source GeoLibre AI Platform Integration</h3>
+        <p>To enable the public to query these models using natural language ("Ask AI"), the repository will connect to an open-source <a href="https://github.com/opengeos/GeoLibre" target="_blank" rel="noreferrer">opengeos/GeoLibre</a> deployment hosted serverless on Google Cloud Platform (GCP).</p>
+        <p><strong>Zero-Duplication Cloud Architecture:</strong> Wherobots writes processed suitability layers directly to cloud storage (S3/GCS) as <strong>GeoParquet</strong> and <strong>PMTiles</strong>. GeoLibre's in-browser <strong>DuckDB-WASM</strong> engine executes SQL by fetching only required byte ranges via HTTP range requests—eliminating dataset duplication, server-side data copying, and large client downloads.</p>
+      </section>
+
+      <!-- Section: Why I Think This Is Useful -->
       <section>
         <h2>Why I think this is useful</h2>
-        <p>This project taught me that Wherobots is more than a faster way to run spatial SQL. It is a way to make large-scale spatial analysis practical for real decision support. It gave me a path from raw geodata to a polished, reviewable spatial document — one that can be opened by a stakeholder, examined by a technical reviewer, and discussed in public.</p>
-        <p>For a personal project, that was the goal: learn the platform, test it at real scale, create something useful, and contribute to the broader discussion about responsible AI infrastructure.</p>
-        <p>If you're interested in spatial analysis, cloud geospatial workflows, or responsible AI infrastructure, feel free to connect with me on <a href="https://www.linkedin.com/in/coreagc/" target="_blank" rel="noreferrer">LinkedIn (George Chandeep Corea)</a>.</p>
+        <p>This project taught me that Wherobots is more than a faster way to run spatial SQL. It makes large-scale, complex spatial analysis practical for real public decision support. It gave me a clean path from raw authoritative geodata to a polished, reviewable spatial document—one that can be opened by a stakeholder, audited by a technical reviewer, and debated constructively in public.</p>
+        <p>For a personal project, that was the goal: learn the platform, test it at real national scale, create something useful, and contribute to the broader discussion about responsible AI infrastructure.</p>
       </section>
 
+      <!-- Section: Links & Attributions -->
       <section>
-        <h2>Repository & Connect Links</h2>
-        <div class="repo-links">
-          <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">Wherobots spatial SQL and geospatial notebook workflows</a>
-          <a href="https://github.com/GetBack2Basics/Spatial_Report_Crafter" target="_blank" rel="noreferrer">Map-in-a-Box Spatial Document Crafter</a>
-          <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html" target="_blank" rel="noreferrer">Interactive National Data Center Siting Suitability Report (runner/national_suitability_report.html)</a>
-          <a href="https://www.linkedin.com/in/coreagc/" target="_blank" rel="noreferrer">Connect on LinkedIn: George Chandeep Corea ↗</a>
+        <h2>Links &amp; Resources</h2>
+        <div class="links-grid">
+          <a href="https://national-suitability-report.vercel.app" target="_blank" rel="noreferrer">🚀 Interactive National Data Center Siting Suitability Report (Hosted by Wherobots)</a>
+          <a href="https://github.com/GetBack2Basics/hunter_spatial_crafter" target="_blank" rel="noreferrer">📁 hunter_spatial_crafter — Wherobots Spatial SQL and Geospatial Workflows (GitHub)</a>
+          <a href="https://github.com/GetBack2Basics/Spatial_Report_Crafter" target="_blank" rel="noreferrer">📦 Spatial_Report_Crafter — Map-in-a-Box Spatial Document Crafter (GitHub)</a>
+          <a href="https://github.com/opengeos/GeoLibre" target="_blank" rel="noreferrer">🌐 opengeos/GeoLibre — Open Source Geospatial AI Web Platform (GitHub)</a>
+          <a href="https://www.linkedin.com/in/coreagc/" target="_blank" rel="noreferrer">🔗 Connect with George Chandeep Corea on LinkedIn</a>
         </div>
       </section>
     </main>

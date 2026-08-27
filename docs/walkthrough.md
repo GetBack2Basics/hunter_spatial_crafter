@@ -1,66 +1,119 @@
-# Recent Changes & Implementation Walkthrough
+# Walkthrough: Wherobots Guest Blog Post Update & GeoLibre Architecture
 
-This document details all major engineering enhancements, spatial models, and dashboard features implemented in this session for the **National Data Center Siting Suitability Engine** (`hunter_spatial_crafter`).
+This document summarizes the updates made to [`docs/wherobots_ai_data_center_suitability_blog.html`](file:///c:/Projects/hunter_spatial_crafter/docs/wherobots_ai_data_center_suitability_blog.html) and provides a comprehensive network architecture specification for **GeoLibre + Google Cloud Platform (GCP) + Wherobots Cloud + S3/GCS** to generate visual network diagrams for the blog post.
 
 ---
 
-## 1. Social & Sensitive Receptor Spatial Scoring (Part 1 Completed)
+## 1. Summary of Changes Made to `docs/wherobots_ai_data_center_suitability_blog.html`
 
-- **Authoritative Coverage Across All 8 Australian Jurisdictions**:
-  - Ingested 16 live authoritative datasets across **NSW, QLD, VIC, WA, ACT, NT, SA, TAS** (ACARA National Schools, NHSD National Health Services Directory, Geoscape Cadastre & G-NAF, ABS 2021 Meshblocks & UCL, Geoscience Australia ELVIS DEM & AEMO Grid, OpenStreetMap Australia) without simulation.
-  - Implemented in [`src/Ingestion/data_injest.py`](file:///c:/Projects/hunter_spatial_crafter/src/Ingestion/data_injest.py).
-- **Automated Ground-Truth QA Cross-Validation**:
-  - Automated cross-checking of sensitive receptor POIs against ABS 2021 Meshblock zoning (`Education`, `Commercial`, `Residential`) with 100% compliance.
-  - Verified slope constraints against Geoscience Australia ELVIS DEM raster elevation ($< 5\%$ grade).
-  - Generated [`docs/data_verification_audit.json`](file:///c:/Projects/hunter_spatial_crafter/docs/data_verification_audit.json) and built the standalone [`runner/data_verification_technical_report.html`](file:///c:/Projects/hunter_spatial_crafter/runner/data_verification_technical_report.html).
-- **Continuous Sigmoidal Buffer Decay Model**:
-  - Implemented in [`src/Analysis/national_suitability_analysis.py`](file:///c:/Projects/hunter_spatial_crafter/src/Analysis/national_suitability_analysis.py) using:
-    $$S_{\text{sensitive}}(d) = \frac{1}{1 + e^{-k (d - d_0)}}$$
-    where $d_0 = 500\text{m}$ (acoustic setback compliance threshold) and $k = 0.01\text{m}^{-1}$ (steepness).
-  - Hard exclusion for $d < 300\text{m}$, acoustic wall mitigation penalty for $300\text{m} \le d < 500\text{m}$, optimal clearance for $500\text{m} \le d < 1,500\text{m}$, optimal workforce distance for $1,500\text{m} \le d < 5,000\text{m}$, and linear commute decay for $d \ge 5,000\text{m}$.
-- **Rebalanced 4-Factor MCDA Engine**:
+### A. Lead-In with Interactive Siting Explorer
+- Positioned the **Interactive Siting Explorer** prompt and direct launch button (`https://national-suitability-report.vercel.app`) immediately after the intro lead paragraph.
+- Added a 4-pill KPI strip displaying live numbers: **17 Candidates**, **8 States/Territories**, **15.91M Geometries**, and **2.4s Spatial Join Speed**.
+
+### B. Full Runtime & Metric Reconciliation (Resolving Ben's Blockers)
+- Replaced ambiguous/conflicting runtime statements with verified, distinct definitions:
+  - **2.4 Seconds:** Core distributed Spatial SQL query execution (Apache Sedona on Wherobots Cloud) over 1.75M+ features using Havasu metadata envelope pruning, Hilbert clustering, and vectorized memory joins.
+  - **18.4s ➔ 3.2s:** Query scan acceleration over 15.91M national geometries using Hilbert space-filling curve partitioning.
+  - **200.6 Seconds:** Complete cold, uncached batch ETL pipeline duration (multi-layer ingestion, GDA2020 CRS transformations, `ST_MakeValid` topology repairs, and Havasu table writes).
+  - **< 1 Millisecond:** Instant client-side What-If sandbox re-scoring executed in the browser via JavaScript.
+- Updated dataset volume to **15,911,245 geometries across 16 authoritative national and state portals**.
+- Emphasized the **85.2% storage footprint reduction** (~2.9 GB raw equivalent compressed to ~430.7 MB GeoParquet).
+
+### C. Explicit Labeling of Simulated Baselines
+- Applied `<span class="badge badge-simulated">Simulated Baselines</span>` to interstate comparison hubs (**Latrobe Valley in VIC, Collie in WA, Gladstone in QLD**) and added an explanatory callout distinguishing national modeled reference baselines from measured high-resolution Hunter micro-siting setbacks.
+
+### D. Exposing High-Value Technical Content & Equations
+- Embedded formatted Spatial SQL snippets:
+  - Net developable area mask with `ST_Difference` and `ST_Union_Aggr`.
+  - Geodesic distance joins with `ST_Distance` and `ST_Transform` (`EPSG:4326` to `EPSG:7856`).
+- Embedded the mathematical **4-Factor MCDA Formula**:
   $$\text{Suitability} = 0.40 \cdot S_{\text{power}} + 0.25 \cdot S_{\text{sensitive}} + 0.20 \cdot S_{\text{water}} + 0.15 \cdot S_{\text{size}}$$
+- Embedded the continuous sigmoidal acoustic setback equation:
+  $$S_{\text{sensitive}}(d) = \frac{1}{1 + e^{-0.01 \cdot (d - 500)}}$$
+- Formatted the 4 pillars of Wherobots query performance (Zero-Scan Metadata Pruning, Hilbert Clustering, Vectorized Memory Execution, and Parallel Distributed Joins).
+
+### E. Author Roadmap & Open-Source GeoLibre Integration
+- Explicitly marked future development as **Author Roadmap**, not current shipped Wherobots features.
+- Clarified the **GeoLibre** (`opengeos/GeoLibre`) integration, zero-duplication cloud storage, DuckDB-WASM execution, and Google Cloud Gemini API integration.
 
 ---
 
-## 2. National Continental-Scale Map & Geoscience Australia Integration
+## 2. GeoLibre + GCP + Wherobots Network Diagram Specification
 
-- **Esri World Topographic / Shaded Relief Terrain Basemap**:
-  - Initial view opens at national continental scale (`center: [-26.5, 134.0], zoom: 4`) with shaded relief terrain.
-  - Clear label typography showing all national capital cities (**Sydney, Melbourne, Brisbane, Perth, Adelaide, Hobart, Darwin, Canberra**) and regional candidate hubs.
-- **Geoscience Australia Major Electricity Transmission Grid**:
-  - Integrated via `esri-leaflet@3.0.12` streaming GA's native ArcGIS Dynamic Map Server (`https://services.ga.gov.au/gis/rest/services/Electricity_Infrastructure/MapServer`), rendering high-voltage power lines (500kV, 330kV, 275kV, 132kV), major power stations, and substations across Australia.
-  - Corrected numeric WMS fallback indexing (`layers: '0,1,2'`).
-- **Clean National Layering & Smart Zoom**:
-  - National transmission grid and candidate markers active on startup. Local high-resolution Macquarie vector layers (precinct boundary, net developable polygons, pipeline corridors, rail lines, biodiversity constraints) are configured in the Layer Control and **auto-activate** when selecting a Hunter site.
+To generate visual network diagrams or architectural infographics for the blog post, the system is designed around three distinct tiers:
+
+```mermaid
+flowchart TB
+    subgraph DataTier["1. Central Cloud Spatial Storage (Zero Duplication)"]
+        S3["Cloud Object Storage (S3 / GCS)\ns3://wherobots-cloud-us-west-2/org_ltq5l3obgb/fgsdb/"]
+        GP["• Suitability GeoParquet (Hilbert Partitioned)\n• PMTiles Vector Layers\n• Havasu Spatial Iceberg Manifests"]
+        S3 --- GP
+    end
+
+    subgraph ComputeTier["2. Heavy Distributed Spatial Compute (Wherobots)"]
+        WB["Wherobots Cloud Engine\n(Apache Sedona on Spark)"]
+        ETL["• 15.91M National Geometries Ingestion\n• Topological Buffering & Difference\n• 2.4s Spatial Joins (Vectorized WKB)\n• Automatic Cluster Teardown"]
+        WB --- ETL
+        ETL -->|"Writes GeoParquet & PMTiles"| S3
+    end
+
+    subgraph ServerlessTier["3. Serverless AI Gateway (Google Cloud Platform)"]
+        CR["GCP Cloud Run (Scale-to-Zero Container)"]
+        FAST["FastAPI Spatial AI Proxy"]
+        GEMINI["Google Gemini API (Generative Spatial SQL)"]
+        OR["OpenRouter Client (BYOK Optional Tier)"]
+        CR --- FAST
+        FAST <-->|"Translates Prompts to DuckDB SQL"| GEMINI
+        FAST <-->|"Optional Models (Claude/GPT-4o)"| OR
+    end
+
+    subgraph ClientTier["4. End-User Browser Client (Zero Server Cost)"]
+        WEB["GeoLibre / Map-in-a-Box Web App\n(Static HTML / JS on CDN)"]
+        WASM["DuckDB-WASM Engine\n(In-Browser SQL Execution)"]
+        SANDBOX["Real-Time MCDA What-If Sandbox\n(<1ms Re-scoring in JS)"]
+        CHAT["AI Spatial Chat Drawer ('Ask AI')"]
+        
+        WEB --- WASM
+        WEB --- SANDBOX
+        WEB --- CHAT
+    end
+
+    %% Network flows
+    CHAT -->|"1. Natural Language Prompt"| FAST
+    FAST -->|"2. Generated DuckDB SQL Query"| WASM
+    WASM -->|"3. HTTP Byte-Range Requests (No Full Downloads)"| GP
+    GP -->|"4. Fetched Parquet Row Groups"| WASM
+    WASM -->|"5. Instant Visualisation on Map & Leaderboard"| WEB
+
+    classDef tierStyle fill:#111827,stroke:#3b82f6,stroke-width:2px,color:#f3f4f6;
+    classDef storageStyle fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f3f4f6;
+    classDef computeStyle fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f3f4f6;
+    classDef clientStyle fill:#1f2937,stroke:#38bdf8,stroke-width:2px,color:#f3f4f6;
+    classDef gcpStyle fill:#431407,stroke:#fb923c,stroke-width:2px,color:#f3f4f6;
+
+    class DataTier storageStyle;
+    class ComputeTier computeStyle;
+    class ServerlessTier gcpStyle;
+    class ClientTier clientStyle;
+```
 
 ---
 
-## 3. Side-by-Side Proponent Claim Audit Panel & PDF Linking
+## 3. Key Architectural Principles of the Network Diagram
 
-- **Restored Ground-Truth Comparison Card**:
-  - Dynamically displays upon clicking any candidate row or marker and smoothly scrolls into view.
-  - **Net Developable Pad Space vs. 100% Proponent Claim**: Compares proponent gross claim (~65 ha) against ground-truth net developable area (**44.5 ha**, detailing 20.5 ha excluded for 30m riparian, 20m pipelines, slope >5%, and TSF dam buffer).
-  - **Straight-Line Euclidean vs. Topological Contour Routing**: Evaluates real network distance using a **1.32x** contour winding factor.
-  - **Thermodynamic Heat Dissipation & District Symbiosis**: Models 45°C waste water delivery temperature drop and environmental river release distance.
-  - **Micro-Pumped Hydro Energy Storage**: Head drop $\Delta h$, head pressure in MPa, and MWh storage capacity.
-  - **TSF Dam Break Sandbox**: Interactive toggle simulating unlocking +15.2 ha if de-declared.
-- **Direct Proponent Masterplan PDF Linking**:
-  - Added direct links to the official [Lake Macquarie Economic Development Action Plan / Masterplan (PDF)](https://www.lakemac.com.au/files/assets/public/v/1/ecdev/documents/lake-mac-economic-development-action-plan.pdf) in both the header bar and audit panel.
+1. **Zero-Duplication Unified Data Layer**:
+   - Wherobots Cloud computes heavy spatial joins once and writes optimized **GeoParquet** and **PMTiles** directly to central cloud storage (S3 / GCS).
+   - Neither GCP web servers nor the user browser ever maintain a full duplicate copy of the dataset.
 
----
+2. **HTTP Range-Request In-Browser Compute**:
+   - The user browser runs **DuckDB-WASM**, executing spatial SQL queries by reading only specific byte ranges from cloud storage via standard HTTP `Range:` headers.
+   - Eliminates multi-gigabyte downloads on client devices and eliminates expensive server-side NVMe disk caching.
 
-## 4. Cadastre Search & Leaderboard Prioritization
+3. **Dual-Cloud Cost & Performance Optimization**:
+   - **Wherobots Cloud (AWS us-west-2)**: Powers distributed heavy spatial computing (Apache Sedona, Havasu metadata pruning, spatial cross-joins). Runtimes auto-stop immediately upon completion to avoid idle charges.
+   - **Google Cloud Platform (GCP Cloud Run)**: Powers the scale-to-zero serverless AI translation proxy connected to Google Gemini (high free tier, zero baseline running cost).
 
-- **Interactive Cadastre & Address Search**:
-  - Added live search filter supporting query by Lot/Plan (e.g. `101//DP755262`, `12//SP289410`, `1//SEC24_ACT`), Street Address, or Locality.
-- **Comparative Benchmark Prioritization**:
-  - Leaderboard sorts high-resolution comparative benchmark sites (**NSW Hunter: Teralba, Killingworth, Cockle Creek, West Lake**) to the top of the table.
-
----
-
-## 5. Institutionalized Compute Resource Cost Protection
-
-- **Permanent Cost Protection Rule** in [`.agents/AGENTS.md`](file:///c:/Projects/hunter_spatial_crafter/.agents/AGENTS.md):
-  - Mandatory termination of all compute instances, Wherobots runtimes, and PySpark sessions (`spark.stop()`) immediately upon execution completion.
-  - Mandatory status audit reporting in every response.
+4. **Conversational "Ask AI" Flow**:
+   - **User Input:** Natural language question in the chat drawer (e.g. *"Find candidate sites in VIC >10 ha within 2km of 330kV lines and >1km from schools"*).
+   - **AI Translation (Cloud Run + Gemini):** Generates clean DuckDB Spatial SQL querying the remote GeoParquet URL with byte-range filtering.
+   - **In-Browser Execution (DuckDB-WASM):** Executes in milliseconds in the browser, instantly highlighting matching parcels on the map and updating the leaderboard.
