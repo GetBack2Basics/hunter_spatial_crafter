@@ -6,9 +6,15 @@ This document summarizes the updates made to [`docs/wherobots_ai_data_center_sui
 
 ## 1. Summary of Changes Made to `docs/wherobots_ai_data_center_suitability_blog.html`
 
-### A. Lead-In with Interactive Siting Explorer
+### A. Lead-In with Interactive Siting Explorer & 6-Card KPI Strip
 - Positioned the **Interactive Siting Explorer** prompt and direct launch button (`https://national-suitability-report.vercel.app`) immediately after the intro lead paragraph.
-- Added a 4-pill KPI strip displaying live numbers: **17 Candidates**, **8 States/Territories**, **15.91M Geometries**, and **2.4s Spatial Join Speed**.
+- Added an interactive 6-pill KPI strip with CSS hover tooltips and accessible `ℹ` footnote anchors:
+  1. **17**: Candidates Benchmarked
+  2. **15.91M**: National Geometries Queried
+  3. **2.4s**: Regional Join Speed
+  4. **3.2s**: National Scan Time (Hilbert Partitioning)
+  5. **< 1ms**: Browser Sandbox Recalibration
+  6. **~$36 AUD (US$24.13)**: Total Batch Compute Cost
 
 ### B. Full Runtime & Metric Reconciliation (Resolving Ben's Blockers)
 - Replaced ambiguous/conflicting runtime statements with verified, distinct definitions:
@@ -32,7 +38,15 @@ This document summarizes the updates made to [`docs/wherobots_ai_data_center_sui
   $$S_{\text{sensitive}}(d) = \frac{1}{1 + e^{-0.01 \cdot (d - 500)}}$$
 - Formatted the 4 pillars of Wherobots query performance (Zero-Scan Metadata Pruning, Hilbert Clustering, Vectorized Memory Execution, and Parallel Distributed Joins).
 
-### E. Author Roadmap & Open-Source GeoLibre Integration
+### E. Engineering Efficiencies & Incremental Spatial Processing
+- Added a dedicated section breaking down how cloud spatial costs can be systematically minimized:
+  - **Decoupled Geometric vs. Scoring Tiers:** Never re-running heavy topological joins / buffers when only tuning MCDA weights or sigmoidal curve steepness.
+  - **Source Data Fingerprinting & Memoization:** Bypassing unchanged authoritative layers via ETags and GeoParquet hashes.
+  - **Delta Partition Processing:** Using Iceberg time-travel to isolate modified parcels (`ST_Changes`).
+  - **Zero-Cost Client Compute Offloading:** Executing What-If sensitivity tests 100% in-browser via JavaScript and DuckDB-WASM ($0.00 cloud cost).
+  - **Cost Impact:** Lowers continuous CI/CD development costs from ~$36 AUD down to **< $5 AUD**.
+
+### F. Author Roadmap & Open-Source GeoLibre Integration
 - Explicitly marked future development as **Author Roadmap**, not current shipped Wherobots features.
 - Clarified the **GeoLibre** (`opengeos/GeoLibre`) integration, zero-duplication cloud storage, DuckDB-WASM execution, and Google Cloud Gemini API integration.
 
