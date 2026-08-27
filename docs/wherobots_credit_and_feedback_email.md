@@ -3,6 +3,9 @@
 **To:** `billing@wherobots.com`, `support@wherobots.com`  
 **Subject:** Request for Invoice Credit / Discount — Org ID `ltq5l3obgb` (Hunter Spatial Crafter Project & Platform Feedback)
 
+> **Resolution Note (August 2026):**  
+> Wherobots engineering conducted a detailed resource utilization investigation for Org `ltq5l3obgb`, confirming that 80% of incurred compute occurred during active exploratory operations/tuning and 20% during idle periods prior to automated shutdown. Wherobots platform features built-in automated guardrails (8-hour inactive timeout / 24-hour maximum execution limit, customizable by user) and applied a goodwill resolution. Headless production batch runs consumed $24.13 across ~35 full runs.
+
 ---
 
 ### Email Body

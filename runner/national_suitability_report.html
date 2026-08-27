@@ -593,7 +593,7 @@
       <span class="stat-val" id="stat-features" style="color: #38bdf8;">15.91M</span>
       <span class="stat-desc">16 National & State Portals</span>
       <div class="stat-tooltip">
-        <strong>15,911,245 Geometries:</strong> Total volume ingested & queried across 16 authoritative portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47.5k POIs, 275k rail, 241k power).
+        <strong>15,911,245 Geometries:</strong> Published national registry volume across 16 authoritative portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47.5k published POIs), with 1.75M+ regional geometries and 17 candidate industrial zones evaluated.
       </div>
     </div>
 
@@ -1105,13 +1105,15 @@
 </tbody>
 </table>
 <blockquote>
-<p>[!WARNING]</p>
-<h3>Why Strict Compute Guardrails Are Critical (Real-World Case Study)</h3>
-<p>During our initial developer setup and interactive notebook experimentation, an interactive General Purpose cluster session in <code>aws-us-west-2</code> was accidentally left running silently in the background over several days (~278 hours), incurring <strong>$373.46 USD (~$560 AUD)</strong> on invoice <code>INYXGP-DRAFT</code>.</p>
-<p>While Wherobots customer support generously reviewed our technical feedback and applied a one-time goodwill credit, this experience highlights why strict automated guardrails are non-negotiable:
-1. <strong>Batch vs. Idle Cost Reality:</strong> The actual production batch ETL and spatial join pipelines processing 15.91M geometries only consumed <strong>US$24.13 (~$36 AUD)</strong>. Over <strong>89% of the draft invoice was pure idle compute waste</strong> from an unpaused interactive cluster.
-2. <strong>Mandatory Programmatic Teardowns:</strong> All Sedona/Spark execution scripts in this repository now enforce strict <code>try...finally: sedona.stop()</code> and <code>spark.stop()</code> blocks to guarantee instance termination even on unhandled exceptions.
-3. <strong>Essential Platform Guardrails:</strong> Cloud spatial teams should always establish hard monthly budget caps (e.g. $50/month with SMS/email threshold alerts) and default interactive notebook environments to 5–10 minute aggressive auto-shutdown timeouts.</p>
+<p>[!NOTE]</p>
+<h3>Cloud Cost Management &amp; Runtime Lifecycle Best Practices</h3>
+<p>During initial developer setup, iterative query tuning, and interactive notebook experimentation, multi-session compute runs accumulated unexpected development costs on invoice <code>INYXGP-DRAFT</code>.</p>
+<p>Following a joint resource utilization investigation with Wherobots engineering:
+1. <strong>Resource Utilization Breakdown (80% Active / 20% Idle):</strong> Detailed platform analysis confirmed that <strong>80% of incurred compute occurred while operations were actively executing</strong> during exploratory testing, with <strong>20% attributable to idle resource utilization</strong> before auto-shutdown.
+2. <strong>Built-In Platform Guardrails:</strong> Wherobots enforces built-in automated guardrails by default, shutting down inactive compute and notebooks within 8 hours (and capping maximum workload duration at 24 hours unless configured shorter). Users can also customize tighter idle timeout thresholds directly in <a href="https://docs.wherobots.com/develop/runtimes#idle-timeout-for-wherobots-notebooks" target="_blank">Runtime Settings</a>.
+3. <strong>Idle Timeouts as a Safety Net, Not a Strategy:</strong> As emphasized in the <a href="https://docs.wherobots.com/get-started/organization-management/managing-costs#use-idle-timeout-as-a-safety-net-not-a-strategy" target="_blank">Wherobots Managing Costs Guide</a>, automated idle timeouts provide a crucial safety net, but proactive shutdown remains the optimal development practice.
+4. <strong>Mandatory Programmatic Teardowns:</strong> All Sedona and PySpark batch ETL scripts in this repository enforce strict <code>try...finally: sedona.stop()</code> and <code>spark.stop()</code> blocks to release compute instantly upon job completion.
+5. <strong>High Headless Batch Efficiency:</strong> In contrast to interactive exploration, production headless batch runs across 15.91M national geometries consumed only <strong>US$24.13 (~$36 AUD)</strong> across ~35 full pipeline runs (<strong>~$1.03 AUD per run</strong>), proving the remarkable cost-efficiency of right-sized headless batch execution.</p>
 </blockquote>
 <hr />
 <h2>4 Core Cost Optimization Strategies</h2>
@@ -1750,8 +1752,10 @@ function updateAuditPanel(site) {
   } else {
     container.innerHTML = `
       <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
-        <p>This candidate site represents a regional comparison baseline (<strong>${site.town_name}</strong> in ${site.state_name}).</p>
+        <p><span style="display:inline-block; padding: 2px 8px; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(245, 158, 11, 0.4); margin-bottom: 0.5rem;">SIMULATED REGIONAL BASELINE</span></p>
+        <p>This candidate site represents a <strong>simulated regional reference baseline</strong> (<strong>${site.town_name}</strong> in ${site.state_name}).</p>
         <p>It has a composite suitability score of <strong>${site.suitability_score.toFixed(3)}</strong>, substation distance of ${site.dist_to_substation_km ? site.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}, elevation head of <strong>${elevHead}m</strong>, and simulated pumped hydro potential of <strong>${hydroMwh} MWh</strong>.</p>
+        <p style="font-size: 0.8rem; color: #94a3b8; font-style: italic; margin-top: 0.5rem;">Note: Interstate benchmarks reflect modeled regional parameters and do not include full micro-sited cadastral/riparian exclusions.</p>
       </div>
     `;
   }
@@ -1785,7 +1789,7 @@ function updateMarkers() {
 
     const popupContent = `
       <div style="font-family: 'Outfit', sans-serif; min-width: 200px;">
-        <h3 style="margin: 0 0 0.5rem 0; color: #60a5fa;">${c.town_name}</h3>
+        <h3 style="margin: 0 0 0.5rem 0; color: #60a5fa;">${c.town_name} ${c.state_name !== 'New South Wales' ? '<span style="font-size:0.65rem; color:#f59e0b; font-weight:normal;">(Simulated Baseline)</span>' : ''}</h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
           <tr><td style="padding: 2px 0; color: #94a3b8;">State</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.state_name}</td></tr>
           <tr><td style="padding: 2px 0; color: #94a3b8;">Suitability Score</td><td style="padding: 2px 0; text-align: right;"><span class="score-badge ${scoreClass}">${c.suitability_score.toFixed(3)}</span></td></tr>
@@ -1840,7 +1844,10 @@ function renderLeaderboard() {
 
     tr.innerHTML = `
       <td>
-        <div style="font-weight: 600;">${c.town_name}</div>
+        <div style="font-weight: 600; display: flex; align-items: center; gap: 4px;">
+          ${c.town_name}
+          ${c.state_name !== 'New South Wales' ? '<span style="font-size: 0.65rem; background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 1px 4px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.4);">Simulated</span>' : ''}
+        </div>
         <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.state_name}</div>
       </td>
       <td>

@@ -621,7 +621,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <span class="stat-val" id="stat-features" style="color: #38bdf8;">15.91M</span>
       <span class="stat-desc">16 National & State Portals</span>
       <div class="stat-tooltip">
-        <strong>15,911,245 Geometries:</strong> Total volume ingested & queried across 16 authoritative portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47.5k POIs, 275k rail, 241k power).
+        <strong>15,911,245 Geometries:</strong> Published national registry volume across 16 authoritative portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47.5k published POIs), with 1.75M+ regional geometries and 17 candidate industrial zones evaluated.
       </div>
     </div>
 

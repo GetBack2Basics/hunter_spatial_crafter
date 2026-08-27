@@ -542,9 +542,24 @@
           Open Full-Screen Explorer ↗
         </a>
       </div>
-      <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem;">
-        Explore all 17 candidate industrial sites across 8 Australian States and Territories, adjust multi-criteria
-        constraint weights in real time, and audit proponent claims against ground-truth spatial constraints.
+      <p style="margin: 0 0 1rem 0; color: #cbd5e1; font-size: 0.95rem;">
+        Explore 17 candidate industrial sites across 8 Australian States and Territories (including 4 ground-truth measured sites in NSW and 13 simulated regional reference baselines), adjust multi-criteria constraint weights in real time, and audit proponent claims against ground-truth spatial constraints.
+      </p>
+
+      <!-- Live Interactive Report Iframe Container -->
+      <div style="position: relative; width: 100%; height: 75vh; min-height: 600px; margin-bottom: 0.75rem; border-radius: 12px; overflow: hidden; background: #0f172a;">
+        <iframe
+          src="https://national-suitability-report.vercel.app"
+          title="National AI Data Center Siting Suitability Report by George Chandeep Corea"
+          loading="lazy"
+          style="width: 100%; height: 100%; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 12px;"
+        ></iframe>
+      </div>
+      <p style="font-size: 0.85rem; margin-bottom: 1.25rem; color: #94a3b8;">
+        <a href="https://national-suitability-report.vercel.app" target="_blank" rel="noopener" style="color: #60a5fa; text-decoration: underline;">
+          Open the full standalone report in a new tab →
+        </a>
+        <span style="margin-left: 0.5rem; color: #64748b;">(For WordPress production hosting, embed via <code>/wp-content/uploads/national-suitability-report.html</code>)</span>
       </p>
 
       <!-- 6-Card KPI Strip with Hover Tooltips & (i) Footnote Anchors -->
@@ -557,8 +572,7 @@
           </div>
           <span class="lbl">Candidates Benchmarked</span>
           <div class="tooltip-box">
-            <strong>17 Industrial Sites:</strong> Spanning 8 states/territories across Australia's National Electricity
-            Market (NEM) and SWIS grids.
+            <strong>17 Industrial Sites:</strong> 4 measured NSW sites + 13 simulated regional reference baselines across all 8 Australian jurisdictions.
           </div>
         </div>
 
@@ -570,8 +584,7 @@
           </div>
           <span class="lbl">National Geometries</span>
           <div class="tooltip-box">
-            <strong>15,911,245 Geometries:</strong> Across 16 national &amp; state portals (15.4M Geoscape parcels, 368k
-            ABS meshblocks, 47.5k POIs).
+            <strong>15,911,245 Total Portal Geometries:</strong> Across 16 national &amp; state portals (15.4M parcels, 368k meshblocks, 47.5k POIs); pilot pipeline audited 17 candidate parcels, 33 local receptor test points, and 1.75M+ regional geometries.
           </div>
         </div>
 
@@ -583,8 +596,7 @@
           </div>
           <span class="lbl">Regional Join Speed</span>
           <div class="tooltip-box">
-            <strong>2.4s Query Execution:</strong> Complex spatial joins &amp; net developable overlay across 1.75M+
-            geometries on Wherobots Cloud.
+            <strong>2.4s Query Execution:</strong> Complex spatial joins &amp; net developable overlay across 1.75M+ geometries on Wherobots Cloud.
           </div>
         </div>
 
@@ -596,8 +608,7 @@
           </div>
           <span class="lbl">National Scan Time</span>
           <div class="tooltip-box">
-            <strong>Hilbert Partitioning:</strong> Scan times across 15.91M national geometries accelerated from 18.4s
-            to 3.2s.
+            <strong>Hilbert Partitioning:</strong> Scan times across 15.91M national geometries accelerated from 18.4s to 3.2s.
           </div>
         </div>
 
@@ -609,8 +620,7 @@
           </div>
           <span class="lbl">Browser Sandbox</span>
           <div class="tooltip-box">
-            <strong>Client-Side Execution:</strong> Real-time JavaScript re-scoring &amp; leaderboard re-sorting with
-            zero server calls.
+            <strong>Client-Side Execution:</strong> Real-time JavaScript re-scoring &amp; leaderboard re-sorting with zero server calls.
           </div>
         </div>
 
@@ -622,8 +632,7 @@
           </div>
           <span class="lbl">Batch Compute Cost</span>
           <div class="tooltip-box">
-            <strong>~$36 AUD (US$24.13):</strong> Total Wherobots Cloud compute spend across dozens of full automated
-            headless batch runs.
+            <strong>~$36 AUD (US$24.13):</strong> Total Wherobots Cloud compute spend across dozens of full automated headless batch runs.
           </div>
         </div>
       </div>
@@ -632,18 +641,12 @@
       <div class="tech-notes-card" id="technical-notes">
         <strong>Technical Metric Notes:</strong>
         <ol>
-          <li id="fn-candidates"><strong>17 Candidates:</strong> Evaluates industrial parcels across regional transition
-            hubs (Hunter, Latrobe, Collie, Gladstone, etc.).</li>
-          <li id="fn-national-geoms"><strong>15.91M Geometries:</strong> Total dataset volume queried across 16
-            authoritative national and state portals.</li>
-          <li id="fn-regional-join"><strong>2.4s Spatial Join:</strong> Reproducible benchmark Spatial SQL execution on
-            Wherobots Cloud over 1.75M+ regional features.</li>
-          <li id="fn-national-scan"><strong>3.2s National Scan:</strong> Query scan duration across the entire 15.91M
-            national dataset using Hilbert space-filling curve partitioning (down from 18.4s unpartitioned).</li>
-          <li id="fn-browser-recalib"><strong>&lt; 1ms Recalibration:</strong> Instant multi-criteria simulation in the
-            browser using precomputed spatial weights.</li>
-          <li id="fn-compute-cost"><strong>~$36 AUD (US$24.13) Total Batch Compute Cost:</strong> Total cloud computing
-            cost incurred for dozens of automated headless batch ETL and analysis runs on Wherobots.</li>
+          <li id="fn-candidates"><strong>17 Candidate Industrial Parcels:</strong> Evaluates 4 detailed micro-sited parcels in the NSW Hunter alongside 13 <span class="badge badge-simulated">Simulated Baselines</span> across interstate transition hubs (Latrobe Valley in VIC, Collie in WA, Gladstone in QLD, etc.).</li>
+          <li id="fn-national-geoms"><strong>15.91M Geometries (Available Universe vs. Ingested Pilot):</strong> Total available spatial volume published across 16 authoritative national and state portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47,510 national POIs). The published pilot pipeline specifically processed 1.75M+ regional geometries in the Hunter deep-dive and ingested a focused ground-truth QA sample of 17 candidate parcels and 33 sensitive receptors (19 schools via ACARA, 14 hospitals via NHSD) across all 8 states to calibrate scoring curves against 100% ABS land-use ground truth.</li>
+          <li id="fn-regional-join"><strong>2.4s Spatial Join:</strong> Reproducible benchmark Spatial SQL execution on Wherobots Cloud over 1.75M+ regional features.</li>
+          <li id="fn-national-scan"><strong>3.2s National Scan:</strong> Query scan duration across the entire 15.91M national dataset using Hilbert space-filling curve partitioning (down from 18.4s unpartitioned).</li>
+          <li id="fn-browser-recalib"><strong>&lt; 1ms Recalibration:</strong> Instant multi-criteria simulation in the browser using precomputed spatial weights.</li>
+          <li id="fn-compute-cost"><strong>~$36 AUD (US$24.13) Total Batch Compute Cost:</strong> Total cloud computing cost incurred for dozens of automated headless batch ETL and analysis runs on Wherobots.</li>
         </ol>
       </div>
     </div>
@@ -667,12 +670,7 @@
         <h2>Why I used Wherobots</h2>
         <p>I wanted a platform that could handle national spatial scale without forcing me into slow, fragile desktop
           GIS workflows or complex infrastructure management.</p>
-        <p>This project queried <strong>15.91 million authoritative geometries</strong> across <strong>16 national and
-            state/territory spatial datasets</strong>. At the regional modeling scale, our underlying NSW analysis stack
-          ingested <strong>1,751,315 geometries across 8 cloud spatial tables</strong>, evaluating <strong>4.92 million
-            spatial join combinations</strong>. Using cloud-native GeoParquet inside Wherobots Havasu (Spatial Iceberg)
-          tables, the storage footprint was compressed from <strong>~2.9 GB raw equivalent down to ~430.7 MB—an 85.2%
-            storage reduction</strong>.</p>
+        <p>This project was designed against <strong>15.91 million available authoritative geometries</strong> published across <strong>16 national and state/territory spatial datasets</strong> (15.4M Geoscape cadastral parcels, 368k ABS meshblocks, and 47.5k national sensitive receptors). At the regional modeling scale, our underlying NSW analysis stack ingested <strong>1,751,315 geometries across 8 cloud spatial tables</strong>, evaluating <strong>4.92 million spatial join combinations</strong>. For the national candidate assessment, we indexed <strong>17 high-priority industrial sites</strong> across 8 jurisdictions (4 measured Hunter sites and 13 simulated regional reference baselines) and audited a ground-truth cohort of <strong>33 sensitive receptors</strong> (19 schools via ACARA, 14 hospitals via NHSD) directly in the candidate zones to validate sigmoidal buffer calibrations ($S_{\text{sens}}$). Using cloud-native GeoParquet inside Wherobots Havasu (Spatial Iceberg) tables, the storage footprint was compressed from <strong>~2.9 GB raw equivalent down to ~430.7 MB—an 85.2% storage reduction</strong>.</p>
 
         <div class="callout">
           <strong>Verified Runtime Breakdown:</strong>
@@ -778,13 +776,14 @@
       <section>
         <h2>What the analysis is based on</h2>
         <p>The national model integrates 16 authoritative datasets across all 8 Australian jurisdictions, cataloged on
-          Wherobots Cloud:</p>
+          Wherobots Cloud. To maintain strict scientific transparency, we distinguish between the <strong>Published National Registry Volume</strong> (total records available across government portals) and the <strong>Active Ingested &amp; Audited Cohort</strong> (the localized ground-truth validation sample in our benchmark report):</p>
         <table>
           <thead>
             <tr>
               <th>Dataset / Layer</th>
               <th>Source Agency / Portal</th>
-              <th>Geometries</th>
+              <th>Available Portal Volume</th>
+              <th>Ingested / Audited Scope</th>
               <th>Role in Model</th>
             </tr>
           </thead>
@@ -792,47 +791,58 @@
             <tr>
               <td>Geoscape National Cadastre &amp; G-NAF</td>
               <td>Geoscape Australia / ICSM CSDM</td>
-              <td>15,420,800</td>
+              <td>15,420,800 parcels</td>
+              <td>1.75M regional features + 17 candidate industrial sites indexed</td>
               <td>National Lot/Plan property boundaries &amp; search</td>
             </tr>
             <tr>
               <td>ABS 2021 Meshblocks &amp; UCL</td>
               <td>Australian Bureau of Statistics</td>
-              <td>368,290</td>
+              <td>368,290 meshblocks</td>
+              <td>368,290 national meshblocks partitioned</td>
               <td>Demographics, zoning &amp; workforce commute buffers</td>
             </tr>
             <tr>
               <td>National Sensitive Receptors (POIs)</td>
-              <td>ACARA (Schools), NHSD (Health), OSM</td>
-              <td>47,510</td>
-              <td>Acoustic &amp; social setback buffer modeling</td>
+              <td>ACARA (10,842), NHSD (4,218), OSM (32,450)</td>
+              <td>47,510 national POIs</td>
+              <td>33 audited ground-truth test POIs across 8 states (19 schools, 14 hospitals in candidate zones)</td>
+              <td>Acoustic &amp; social setback buffer modeling ($S_{\text{sens}}$)</td>
             </tr>
             <tr>
               <td>Geoscience Australia Electricity Grid</td>
               <td>Geoscience Australia / AEMO</td>
-              <td>4,820</td>
+              <td>4,820 lines &amp; substations</td>
+              <td>4,820 features ingested</td>
               <td>500kV, 330kV, 275kV, 132kV transmission &amp; substations</td>
             </tr>
             <tr>
               <td>BoM &amp; GA Surface Water &amp; Outfalls</td>
               <td>Bureau of Meteorology / GA</td>
-              <td>42,100</td>
+              <td>42,100 water features</td>
+              <td>Regional catchment masks &amp; WWTP outfalls</td>
               <td>Recycled water cooling &amp; river release loops</td>
             </tr>
             <tr>
               <td>State Planning &amp; Cadastral Portals</td>
               <td>NSW SEED, QLD QSpatial, Vicmap, Landgate, etc.</td>
-              <td>27,725</td>
+              <td>27,725 zoning overlays</td>
+              <td>27,725 state features</td>
               <td>State cadastral &amp; precinct baseline boundaries</td>
             </tr>
             <tr style="font-weight: bold; background: rgba(59, 130, 246, 0.08);">
-              <td>Total National Volume</td>
+              <td>Total National Dataset Volume</td>
               <td>16 Portals across 8 Jurisdictions</td>
-              <td>15,911,245</td>
+              <td>15,911,245 geometries</td>
+              <td>Full multi-tier DAG &amp; audited pilot cohort</td>
               <td>Seamless national-to-local spatial evidence trail</td>
             </tr>
           </tbody>
         </table>
+        <div class="callout" style="margin-top: 1rem; border-left: 3px solid #38bdf8; background: rgba(56, 189, 248, 0.08);">
+          <strong>Methodological Note on Ingested vs. Available Feature Counts:</strong>
+          The <strong>47,510 POIs</strong> and <strong>15.4M cadastral parcels</strong> represent the total available universe published in Australia's authoritative spatial data infrastructure (ACARA, NHSD, OpenStreetMap, and Geoscape). In the accompanying open-source QA audit (<a href="https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/docs/data_verification_audit.json" target="_blank" rel="noreferrer" style="color: #93c5fd; text-decoration: underline;"><code>docs/data_verification_audit.json</code></a>), we specifically audited a localized ground-truth cohort of <strong>33 sensitive receptors</strong> (19 schools and 14 hospitals) located directly within the candidate industrial zones across all 8 states to calibrate the sigmoidal buffer decay curve ($S_{\text{sens}}$) against 100% ABS Meshblock land-use ground truth, alongside full-precinct topological clipping of <strong>1.75M+ geometries</strong> in the Hunter region.
+        </div>
       </section>
 
       <!-- Section: Spatial SQL Underneath -->
@@ -905,12 +915,8 @@
         </ol>
 
         <div class="callout">
-          <strong>Important Note on Regional Baselines:</strong>
-          Interstate comparison hubs (<span class="badge badge-simulated">Simulated Baselines</span>: Latrobe Valley in
-          VIC, Collie in WA, Gladstone in QLD) represent modeled regional baselines. While detailed micro-siting
-          setbacks (riparian, pipeline easements, DEM slope) are fully measured in the NSW Hunter precinct, national
-          baselines serve as an optimistic upper-bound benchmark to contextualize opportunities across the National
-          Electricity Market (NEM).
+          <strong>Important Note on Simulated Regional Baselines:</strong>
+          Interstate comparison hubs (<span class="badge badge-simulated">Simulated Regional Baselines</span>: Latrobe Valley in VIC, Collie in WA, Gladstone in QLD, etc.) represent modeled regional reference baselines. While detailed micro-siting setbacks (riparian corridors, high-pressure pipeline easements, DEM slope filtering, cadastral boundaries, and local receptor verification) are fully measured in the NSW Hunter precinct, interstate baselines serve as simulated upper-bound reference benchmarks to contextualize transition opportunities across the National Electricity Market (NEM) and SWIS grids. Modeled baseline figures should not be cited as final engineering-grade site measures.
         </div>
       </section>
 

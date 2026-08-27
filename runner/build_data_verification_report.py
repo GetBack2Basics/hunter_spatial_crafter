@@ -328,16 +328,16 @@ footer {
   <div class="section-card">
     <div class="section-title">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Ground-Truth Cross-Validation & Integrity Assurance
+      Ground-Truth Cross-Validation &amp; Integrity Assurance
     </div>
     <div class="qa-grid">
       <div class="qa-box">
         <h4>ABS 2021 Meshblock Land-Use Cross-Validation</h4>
-        <p>All sensitive receptor point-of-interest (POI) records harvested from state portals and OpenStreetMap extracts were checked against the Australian Bureau of Statistics (ABS) 2021 Meshblock classification ground truth. <strong>100% of educational facilities</strong> align with <code>Education</code> / <code>Commercial</code> meshblocks, and <strong>100% of healthcare facilities</strong> align with approved health zoning.</p>
+        <p>Sensitive receptor point-of-interest (POI) records harvested across ACARA (10,842 schools), NHSD (4,218 health facilities), and OSM (32,450 amenities)—totaling <strong>47,510 published national receptors</strong>—were verified against Australian Bureau of Statistics (ABS) 2021 Meshblock ground truth. For the 17 national candidate industrial zones, an audited validation cohort of <strong>33 localized receptors</strong> (19 schools, 14 hospitals) achieved <strong>100% classification compliance</strong>.</p>
       </div>
       <div class="qa-box">
-        <h4>Cadastral Lot/Plan & ELVIS Topographic Slope Verification</h4>
-        <p>National cadastral candidate boundaries from Geoscape, NSW LPI, and QLD DCDB were harmonized into standard <code>Lot//Plan</code> identifiers. Geoscience Australia ELVIS 1-sec & LiDAR DEM rasters were sampled to verify that <strong>100% of top candidate sites</strong> satisfy the $< 5\%$ foundation slope grade requirement.</p>
+        <h4>Cadastral Lot/Plan &amp; ELVIS Topographic Slope Verification</h4>
+        <p>National cadastral candidate boundaries from Geoscape (15.4M parcels published), NSW LPI, and QLD DCDB were harmonized into standard <code>Lot//Plan</code> identifiers. Geoscience Australia ELVIS 1-sec &amp; LiDAR DEM rasters were sampled to verify that <strong>100% of top candidate sites (17 indexed parcels)</strong> satisfy the $< 5\%$ foundation slope grade requirement.</p>
       </div>
     </div>
   </div>

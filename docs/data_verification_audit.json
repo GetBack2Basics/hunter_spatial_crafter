@@ -11,12 +11,26 @@
     "TAS"
   ],
   "metrics": {
+    "audited_candidate_zone_education_receptors": 19,
     "total_education_receptors_ingested": 19,
     "education_meshblock_alignment_pct": 100.0,
+    "audited_candidate_zone_healthcare_receptors": 14,
     "total_healthcare_receptors_ingested": 14,
     "healthcare_meshblock_alignment_pct": 100.0,
+    "audited_candidate_industrial_parcels": 17,
     "total_cadastral_parcels_indexed": 17,
-    "cadastral_dem_slope_compliance_pct": 100.0
+    "cadastral_dem_slope_compliance_pct": 100.0,
+    "portal_available_national_receptors_total": 47510,
+    "portal_available_national_schools_acara": 10842,
+    "portal_available_national_health_nhsd": 4218,
+    "portal_available_national_osm_receptors": 32450,
+    "portal_available_national_cadastre_parcels": 15420800,
+    "portal_available_total_geometries_across_16_portals": 15911245
+  },
+  "data_scope_notes": {
+    "distinction_note": "CRITICAL DISTINCTION: 'portal_available' represents total national registry volume published across Australian portals (15.91M total geometries / 47,510 sensitive receptors). 'audited_candidate_zone' represents the localized 33-receptor QA sample (19 schools, 14 hospitals) across 8 states specifically audited for 100% ABS Meshblock ground-truth compliance and sigmoidal buffer calibration.",
+    "audited_cohort_coverage": "17 high-priority candidate industrial parcels across 8 Australian jurisdictions",
+    "regional_deep_dive_volume": "1.75M+ geometries processed for Macquarie/Hunter regional Net Developable Area pipeline"
   },
   "lineage_records": {
     "national_cadastre": {

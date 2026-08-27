@@ -50,11 +50,15 @@ In the blog post, I dive deep into how Apache Sedona and Wherobots Cloud transfo
 
 ---
 
-### 🛡️ A Transparent Note on Cloud Guardrails & Resource Teardown
+### 🛡️ A Note on Cloud Cost Management & Lifecycle Best Practices
 
-In the spirit of open engineering, the article also transparently shares a critical lesson on developer guardrails: during early environment setup, an idle interactive cluster session left running without shutdown hooks incurred an unexpected spike. 
+In the spirit of open engineering, we also discuss practical cloud cost optimization: during initial exploratory testing and iterative tuning, multi-session interactive compute accumulated unexpected development charges.
 
-Wherobots support generously reviewed our technical feedback and applied a one-time goodwill credit. This real-world experience reinforced why strict programmatic teardowns (`try...finally: sedona.stop()`), hard budget caps, and aggressive auto-pause timeouts are now standard architectural rules in our repo.
+A joint utilization analysis with Wherobots engineering highlighted key operational takeaways:
+* **80% of incurred compute was active execution** during experimentation, with **20% idle before timeout shutdown**.
+* Wherobots provides built-in automated guardrails by default (including default idle auto-shutdown within 8 hours and 24-hour runtime limits), which users can further tune with tighter timeout settings.
+* As Wherobots' cost guide highlights, idle timeouts serve as a safety backstop—proactive teardowns and programmatic `try...finally: sedona.stop()` blocks are the gold standard.
+* Production headless batch ETL across 15.91M national geometries cost just **~$36 AUD (US$24.13)** across ~35 full runs (~$1.03 AUD/run), highlighting the immense efficiency of right-sized headless batch execution.
 
 ---
 

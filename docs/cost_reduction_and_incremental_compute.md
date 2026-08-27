@@ -22,14 +22,16 @@ The **~$36 AUD (US$24.13)** batch compute expenditure was distributed across 4 k
 | **Automated QA & Regression Passes** | ~4 runs | Automated topology validation, data lineage checks, and multi-criteria scoring verification. | ~US$2.75 |
 | **Total Automated Batch Runs** | **~35 runs** | **15.91M National Geometries & 1.75M Regional Features** | **US$24.13 (~$36 AUD)** |
 
-> [!WARNING]
-> ### Why Strict Compute Guardrails Are Critical (Real-World Case Study)
-> During our initial developer setup and interactive notebook experimentation, an interactive General Purpose cluster session in `aws-us-west-2` was accidentally left running silently in the background over several days (~278 hours), incurring **$373.46 USD (~$560 AUD)** on invoice `INYXGP-DRAFT`.
+> [!NOTE]
+> ### Cloud Cost Management & Runtime Lifecycle Best Practices
+> During initial developer setup, iterative query tuning, and interactive notebook experimentation, multi-session compute runs accumulated unexpected development costs on invoice `INYXGP-DRAFT`. 
 > 
-> While Wherobots customer support generously reviewed our technical feedback and applied a one-time goodwill credit, this experience highlights why strict automated guardrails are non-negotiable:
-> 1. **Batch vs. Idle Cost Reality:** The actual production batch ETL and spatial join pipelines processing 15.91M geometries only consumed **US$24.13 (~$36 AUD)**. Over **89% of the draft invoice was pure idle compute waste** from an unpaused interactive cluster.
-> 2. **Mandatory Programmatic Teardowns:** All Sedona/Spark execution scripts in this repository now enforce strict `try...finally: sedona.stop()` and `spark.stop()` blocks to guarantee instance termination even on unhandled exceptions.
-> 3. **Essential Platform Guardrails:** Cloud spatial teams should always establish hard monthly budget caps (e.g. $50/month with SMS/email threshold alerts) and default interactive notebook environments to 5–10 minute aggressive auto-shutdown timeouts.
+> Following a joint resource utilization investigation with Wherobots engineering:
+> 1. **Resource Utilization Breakdown (80% Active / 20% Idle):** Detailed platform analysis confirmed that **80% of incurred compute occurred while operations were actively executing** during exploratory testing, with **20% attributable to idle resource utilization** before auto-shutdown.
+> 2. **Built-In Platform Guardrails:** Wherobots enforces built-in automated guardrails by default, shutting down inactive compute and notebooks within 8 hours (and capping maximum workload duration at 24 hours unless configured shorter). Users can also customize tighter idle timeout thresholds directly in [Runtime Settings](https://docs.wherobots.com/develop/runtimes#idle-timeout-for-wherobots-notebooks).
+> 3. **Idle Timeouts as a Safety Net, Not a Strategy:** As emphasized in the [Wherobots Managing Costs Guide](https://docs.wherobots.com/get-started/organization-management/managing-costs#use-idle-timeout-as-a-safety-net-not-a-strategy), automated idle timeouts provide a crucial safety net, but proactive shutdown remains the optimal development practice.
+> 4. **Mandatory Programmatic Teardowns:** All Sedona and PySpark batch ETL scripts in this repository enforce strict `try...finally: sedona.stop()` and `spark.stop()` blocks to release compute instantly upon job completion.
+> 5. **High Headless Batch Efficiency:** In contrast to interactive exploration, production headless batch runs across 15.91M national geometries consumed only **US$24.13 (~$36 AUD)** across ~35 full pipeline runs (**~$1.03 AUD per run**), proving the remarkable cost-efficiency of right-sized headless batch execution.
 
 ---
 
