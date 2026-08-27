@@ -29,7 +29,7 @@
       line-height: 1.7;
     }
     .container {
-      max-width: 1050px;
+      max-width: 1080px;
       margin: 0 auto;
       padding: 2.5rem 1.25rem 5rem;
     }
@@ -126,31 +126,128 @@
       background: #1d4ed8;
       transform: translateY(-1px);
     }
+    
+    /* 6-Card KPI Strip with Tooltips & Links */
     .kpi-strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 0.75rem;
-      margin-top: 1rem;
+      margin-top: 1.25rem;
     }
     .kpi-pill {
-      background: rgba(15, 23, 42, 0.65);
+      position: relative;
+      background: rgba(15, 23, 42, 0.75);
       border: 1px solid var(--border);
-      padding: 0.75rem 1rem;
-      border-radius: 0.6rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 0.65rem;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .kpi-pill:hover {
+      border-color: rgba(96, 165, 250, 0.5);
+      transform: translateY(-2px);
+    }
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
     }
     .kpi-pill .val {
       display: block;
-      font-size: 1.35rem;
+      font-size: 1.25rem;
       font-weight: 800;
       color: var(--accent-2);
       font-family: "JetBrains Mono", monospace;
+      line-height: 1.2;
     }
     .kpi-pill .lbl {
       display: block;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
+      margin-top: 0.35rem;
+      line-height: 1.35;
+    }
+    .info-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(96, 165, 250, 0.15);
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      color: #93c5fd;
+      font-size: 0.7rem;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .info-link:hover {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #60a5fa;
+      transform: scale(1.15);
+    }
+
+    /* CSS Hover Tooltip */
+    .kpi-pill .tooltip-box {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 210px;
+      background: #0f172a;
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      color: #e2e8f0;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      z-index: 50;
+      transition: opacity 0.2s, visibility 0.2s;
+      pointer-events: none;
+      text-align: left;
+    }
+    .kpi-pill .tooltip-box::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #0f172a transparent transparent transparent;
+    }
+    .kpi-pill:hover .tooltip-box {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* Technical Notes Accordion / Callout */
+    .tech-notes-card {
+      margin-top: 1rem;
+      background: rgba(10, 15, 30, 0.6);
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      padding: 0.85rem 1.1rem;
+      border-radius: 0.6rem;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+    .tech-notes-card ol {
+      margin: 0.4rem 0 0 1.1rem;
+      padding: 0;
+    }
+    .tech-notes-card li {
+      margin: 0.25rem 0;
+    }
+    .tech-notes-card strong {
+      color: #cbd5e1;
     }
 
     /* Content Sections */
@@ -370,23 +467,93 @@
       <p style="margin: 0; color: #cbd5e1; font-size: 0.95rem;">
         Explore all 17 candidate industrial sites across 8 Australian States and Territories, adjust multi-criteria constraint weights in real time, and audit proponent claims against ground-truth spatial constraints.
       </p>
+
+      <!-- 6-Card KPI Strip with Hover Tooltips & (i) Footnote Anchors -->
       <div class="kpi-strip">
+        <!-- 1. Candidates -->
         <div class="kpi-pill">
-          <span class="val">17</span>
+          <div class="kpi-top">
+            <span class="val">17</span>
+            <a href="#fn-candidates" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
           <span class="lbl">Candidates Benchmarked</span>
+          <div class="tooltip-box">
+            <strong>17 Industrial Sites:</strong> Spanning 8 states/territories across Australia's National Electricity Market (NEM) and SWIS grids.
+          </div>
         </div>
+
+        <!-- 2. States -->
         <div class="kpi-pill">
-          <span class="val">8</span>
+          <div class="kpi-top">
+            <span class="val">8</span>
+            <a href="#fn-states" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
           <span class="lbl">States &amp; Territories</span>
+          <div class="tooltip-box">
+            <strong>All 8 Jurisdictions:</strong> NSW, QLD, VIC, WA, ACT, NT, SA, and TAS.
+          </div>
         </div>
+
+        <!-- 3. National Geometries -->
         <div class="kpi-pill">
-          <span class="val">15.91M</span>
-          <span class="lbl">Geometries Queried</span>
+          <div class="kpi-top">
+            <span class="val">15.91M</span>
+            <a href="#fn-national-geoms" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
+          <span class="lbl">National Geometries</span>
+          <div class="tooltip-box">
+            <strong>15,911,245 Geometries:</strong> Across 16 national &amp; state portals (15.4M Geoscape parcels, 368k ABS meshblocks, 47.5k POIs).
+          </div>
         </div>
+
+        <!-- 4. Regional Join Speed -->
         <div class="kpi-pill">
-          <span class="val">2.4s</span>
-          <span class="lbl">Spatial Join Speed</span>
+          <div class="kpi-top">
+            <span class="val">2.4s</span>
+            <a href="#fn-regional-join" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
+          <span class="lbl">Regional Join Speed</span>
+          <div class="tooltip-box">
+            <strong>2.4s Query Execution:</strong> Complex spatial joins &amp; net developable overlay across 1.75M+ geometries on Wherobots Cloud.
+          </div>
         </div>
+
+        <!-- 5. National Scan Speed -->
+        <div class="kpi-pill">
+          <div class="kpi-top">
+            <span class="val">3.2s</span>
+            <a href="#fn-national-scan" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
+          <span class="lbl">National Scan Time</span>
+          <div class="tooltip-box">
+            <strong>Hilbert Partitioning:</strong> Scan times across 15.91M national geometries accelerated from 18.4s to 3.2s.
+          </div>
+        </div>
+
+        <!-- 6. In-Browser Recalibration -->
+        <div class="kpi-pill">
+          <div class="kpi-top">
+            <span class="val">&lt; 1ms</span>
+            <a href="#fn-browser-recalib" class="info-link" title="Click to view footnote details">ℹ</a>
+          </div>
+          <span class="lbl">Browser Sandbox</span>
+          <div class="tooltip-box">
+            <strong>Client-Side Execution:</strong> Real-time JavaScript re-scoring &amp; leaderboard re-sorting with zero server calls.
+          </div>
+        </div>
+      </div>
+
+      <!-- Footnote Detail Card (Ensures readability in all blog engines) -->
+      <div class="tech-notes-card" id="technical-notes">
+        <strong>Technical Metric Notes:</strong>
+        <ol>
+          <li id="fn-candidates"><strong>17 Candidates:</strong> Evaluates industrial parcels across regional hubs (Hunter, Latrobe, Collie, Gladstone, etc.).</li>
+          <li id="fn-states"><strong>8 Jurisdictions:</strong> Full national coverage (NSW, QLD, VIC, WA, ACT, NT, SA, TAS).</li>
+          <li id="fn-national-geoms"><strong>15.91M Geometries:</strong> Total dataset volume queried across 16 authoritative national and state portals.</li>
+          <li id="fn-regional-join"><strong>2.4s Spatial Join:</strong> Reproducible benchmark Spatial SQL execution on Wherobots Cloud over 1.75M+ regional features.</li>
+          <li id="fn-national-scan"><strong>3.2s National Scan:</strong> Query scan duration across the entire 15.91M national dataset using Hilbert space-filling curve partitioning (down from 18.4s unpartitioned).</li>
+          <li id="fn-browser-recalib"><strong>&lt; 1ms Recalibration:</strong> Instant multi-criteria simulation in the browser using precomputed spatial weights.</li>
+        </ol>
       </div>
     </div>
 
