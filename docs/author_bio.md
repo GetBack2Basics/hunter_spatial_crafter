@@ -8,8 +8,8 @@
 
 ### Biography
 
-George Chandeep Corea is a Geospatial Data Lead, cloud-native spatial engineer, and founder of *GetBack2Basics*. He specializes in scalable spatial ETL architectures using Apache Sedona, Wherobots Cloud, PySpark, GeoParquet, and DuckDB-WASM.
+George Chandeep Corea is a Geospatial Data Lead, cloud-native spatial engineer, and founder of *GetBack2Basics*. He specializes in scalable spatial ETL architectures using current and old school spatial and web tool stacks with 20+ years of experience.
 
-His experience covers national infrastructure siting, GDA2020 cadastral modernization, environmental monitoring (ECM/SLATS), and HPC bushfire modeling. As the creator of *AuraSiting Crafter*, George built an open-source multi-criteria engine benchmarking clean energy, water security, acoustic buffers, and developable land across 15.91 million Australian geometries.
+His recent work covers GDA2020 cadastral modernization at an enterprise level, environmental monitoring at a state level, and disaster modeling and high level coordination with FEMA. As the creator of *AuraSiting Crafter* (currently `hunter_spatial_crafter`), George built an open-source multi-criteria engine benchmarking clean energy, water security, acoustic buffers, and developable land across 15.91 million Australian geometries using Wherobots MCP as the critical foundation.
 
 Passionate about open standards, George connects distributed spatial engineering with data-driven decision-making for government agencies, energy planners, and regional authorities.
