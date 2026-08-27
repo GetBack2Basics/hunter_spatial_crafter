@@ -6,6 +6,9 @@ description: Expert guidance on Wherobots Cloud, SedonaContext, Spatial SQL quer
 
 This skill provides guidelines and best practices for writing Wherobots Spatial SQL, initializing `SedonaContext`, executing spatial ETL workflows, and configuring the Wherobots MCP Server.
 
+## Reference Playbook
+For enterprise architecture guidelines, consult the [Wherobots & Antigravity Engineering Playbook](https://github.com/GetBack2Basics/CheatSheets/blob/main/wherobots_antigravity_playbook.md).
+
 ## 1. Sedona & Wherobots Context Initialization
 Always initialize the `SedonaContext` to compile spatial SQL functions:
 ```python
@@ -34,7 +37,7 @@ To configure the Wherobots MCP server manually in your editor:
   - `ST_Contains(a, b)`, `ST_Intersects(a, b)`: Perform spatial predicate checks.
   - `ST_Area(geom)`: Computes metric or degree area.
 
-## 4. Resource Management & Cost Protection Cheat Sheet
+## 4. Incremental Spatial Compute & Cost Optimization Principles
 
 > [!CAUTION]
 > **Avoid Unintentional Billing Blowouts**: Interactive General Purpose SUs bill continuously per hour while a runtime session remains open (e.g. $1.50+/SU-hour). Always follow these safety rules.
@@ -54,14 +57,20 @@ To configure the Wherobots MCP server manually in your editor:
          sedona.stop()
      ```
 
-3. **Managing Interactive MCP Server & Notebook Sessions**:
+3. **Decouple Heavy Geometry Joins from Lightweight Multi-Criteria Scoring**:
+   - Never re-execute multi-million feature spatial overlays and buffer unions when only tweaking MCDA weighting coefficients or sigmoidal curve steepness ($k$).
+   - Persist intermediate topological distance matrices and net developable pad boundaries in Havasu/GeoParquet.
+
+4. **Data Fingerprinting & Snapshot Memoization**:
+   - Check upstream dataset hashes (ETags, Iceberg snapshot IDs) to skip re-ingesting static layers (e.g., rail networks, power grids, cadastre).
+
+5. **Managing Interactive MCP Server & Notebook Sessions**:
    - **Wherobots MCP Server**: Keep the server stopped when not actively executing queries (`MCP: List Servers` -> `Stop Server`).
    - **Session Idle Timeouts**: Configure interactive session auto-shutdown in Wherobots Cloud console to **5 minutes** of inactivity.
    - **Kernel Shutdown**: Explicitly shut down Jupyter notebook kernels immediately after completing interactive spatial exploration.
 
-4. **Spatial Query & I/O Optimization**:
+6. **Spatial Query & I/O Optimization**:
    - **Spatial Envelope Filtering**: Filter bounding boxes (`ST_Intersects(geom, ST_MakeEnvelope(...))`) BEFORE running heavy spatial operations (`ST_Buffer`, `ST_Intersection`).
    - **Avoid `SELECT *`**: Request only specific columns to enable Parquet/Havasu projection pushdown.
    - **DataFrame Caching**: Call `.cache()` on complex intermediate geometry DataFrames that are evaluated multiple times, and `.unpersist()` when complete.
    - **Single Region Lock**: Standardize environment configuration to a single cloud region (e.g., `aws-us-west-2`) to avoid running concurrent runtime clusters across multiple regions.
-

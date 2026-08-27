@@ -519,6 +519,10 @@ HTML_PAGE = """<!DOCTYPE html>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
         Wherobots Cloud (Apache Sedona)
       </a>
+      <a href="https://github.com/GetBack2Basics/CheatSheets/blob/main/wherobots_antigravity_playbook.md" class="metadata-pill" target="_blank" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc; text-decoration: none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        Engineering Playbook ↗
+      </a>
     </div>
   </header>
 
@@ -921,6 +925,7 @@ HTML_PAGE = """<!DOCTYPE html>
         <li><strong>ICSM Cadastral Spatial Data Model (CSDM 2020):</strong> National and State Cadastral Lot/Plan standardization standard.</li>
         <li><strong>Geoscience Australia ELVIS Elevation Framework:</strong> High-resolution DEM slope filtering (<a href="https://elevation.fsdf.org.au/" target="_blank" style="color: #60a5fa; text-decoration: underline;">ELVIS FSDF ↗</a>).</li>
         <li><strong>Lake Macquarie City Council Economic Development Action Plan:</strong> Masterplan clean energy transition strategy (<a href="https://www.lakemac.com.au/files/assets/public/v/1/ecdev/documents/lake-mac-economic-development-action-plan.pdf" target="_blank" style="color: #60a5fa; text-decoration: underline;">Official PDF ↗</a>).</li>
+        <li><strong>Wherobots & Antigravity Engineering Playbook:</strong> Enterprise spatial compute, incremental ETL and cost optimization guide (<a href="https://github.com/GetBack2Basics/CheatSheets/blob/main/wherobots_antigravity_playbook.md" target="_blank" style="color: #60a5fa; text-decoration: underline;">CheatSheets Playbook ↗</a>).</li>
       </ul>
     </div>
 
