@@ -42,7 +42,7 @@ Built as an independent, private learning data-first project, the engine evaluat
 
 ### From Deep Compute to an Interactive "Map in a Box"
 
-I didn't want the findings locked away in a specialist GIS system. The engine compiles the entire national analysis into an interactive, zero-dependency HTML document.
+I didn't want the findings locked away in a specialist GIS system. The engine compiles the entire national analysis into an interactive, zero-dependency HTML document (evaluating 4 ground-truth sites in NSW alongside 13 simulated regional reference baselines).
 
 Anyone can open the report in a web browser, search candidate sites by street address or cadastral Lot/Plan, and use the **What-If Sandbox** to adjust ranking weights in real time—instantly seeing how site rankings change across Australia with zero server latency.
 
@@ -50,9 +50,9 @@ Anyone can open the report in a web browser, search candidate sites by street ad
 
 ### Read the Technical Breakdown & Explore the Data
 
-I have documented the complete engineering journey—including how the system queried 4.92 million spatial geometries in 200.6 seconds on Wherobots Cloud—in my partner technical blog:
+I have documented the complete engineering journey—including how the system executes complex spatial joins in 2.4 seconds and cold batch ETL pipelines across 4.92 million spatial combinations in 200.6 seconds on Wherobots Cloud—in my partner technical blog:
 
-* 🌐 **Interactive National Siting Dashboard**: [Explore the Live Report](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html). You must download it.
+* 🌐 **Interactive National Siting Dashboard**: [Launch Live Report (Free Web Version)](https://national-suitability-report.vercel.app) | [GitHub Standalone File](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)
 * 📄 **Technical Data & Provenance Report**: [View Data Verification Audit](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/data_verification_technical_report.html)
 * 🛠️ **Open Source Project Repository**: [hunter_spatial_crafter on GitHub](https://github.com/GetBack2Basics/hunter_spatial_crafter)
 

@@ -38,8 +38,11 @@ The interactive runner UI and What-If sandbox incorporate neutral policy presets
 | Deliverable | Location | Purpose |
 | :--- | :--- | :--- |
 | **README Overview** | [`README.md`](file:///c:/Projects/hunter_spatial_crafter/README.md) | Official project documentation, story arc, and capability matrix. |
-| **Wherobots Partner Blog** | [`docs/wherobots_ai_data_center_suitability_blog.html`](file:///c:/Projects/hunter_spatial_crafter/docs/wherobots_ai_data_center_suitability_blog.html) | Technical deep-dive on scaling from local precinct to 4.92M geometries nationally. |
-| **LinkedIn Thought Leadership** | [`docs/linkedin_article_draft.md`](file:///c:/Projects/hunter_spatial_crafter/docs/linkedin_article_draft.md) | High-impact article connecting the project to the National Cabinet AI standards debate. |
-| **Multi-Perspective Briefing** | [`docs/strategic_briefing_multi_persona.md`](file:///c:/Projects/hunter_spatial_crafter/docs/strategic_briefing_multi_persona.md) | Interactive "I am a..." strategic briefing for state and federal stakeholders. |
+| **Guest Blog Announcement** | [`docs/linkedin_article_3_wherobots_guest_blog_announcement.md`](file:///c:/Projects/hunter_spatial_crafter/docs/linkedin_article_3_wherobots_guest_blog_announcement.md) | Technical thought-leadership announcing the cloud-native spatial siting engine. |
+| **DPHI Late Submission** | [`docs/dphi_macquarie_coal_precinct_late_submission.md`](file:///c:/Projects/hunter_spatial_crafter/docs/dphi_macquarie_coal_precinct_late_submission.md) | Formal spatial submission for the Macquarie Coal Complex precinct transformation. |
+| **NSW Govt Geospatial Benefits** | [`docs/nsw_govt_geospatial_benefits.md`](file:///c:/Projects/hunter_spatial_crafter/docs/nsw_govt_geospatial_benefits.md) | Cross-agency spatial benefits, cadastral alignment, and state planning analysis. |
+| **Cost & Compute Architecture** | [`docs/cost_reduction_and_incremental_compute.md`](file:///c:/Projects/hunter_spatial_crafter/docs/cost_reduction_and_incremental_compute.md) | Engineering playbook for distributed spatial SQL, caching, and $0 client-side WASM compute. |
 | **Interactive National Siting Report** | [`runner/national_suitability_report.html`](file:///c:/Projects/hunter_spatial_crafter/runner/national_suitability_report.html) | Self-contained "Map in a Box" with live Kepler.gl map and DuckDB-WASM sandbox. |
 | **Data Verification Audit** | [`runner/data_verification_technical_report.html`](file:///c:/Projects/hunter_spatial_crafter/runner/data_verification_technical_report.html) | Authoritative dataset provenance, CRS parameters, and spatial lineage audit. |
+| **Calculations Reference** | [`docs/spatial_calculations_reference.json`](file:///c:/Projects/hunter_spatial_crafter/docs/spatial_calculations_reference.json) | Mathematical definitions, layer weights, and multi-criteria scoring criteria. |
+

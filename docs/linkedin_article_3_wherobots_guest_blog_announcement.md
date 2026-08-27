@@ -14,9 +14,9 @@
 
 ### Post Body
 
-I am truly honored and grateful to have been invited by the engineering team at **Wherobots** to write a technical guest post sharing the architectural journey behind **AuraSiting Crafter**.
+I am truly honored and grateful to have been invited by **Wherobots** to write a technical guest post sharing the architectural journey behind **AuraSiting Crafter**.
 
-What began as my personal curiosity to test cloud spatial tools against a local industrial proposal in New South Wales (the Lake Macquarie / Hunter coal transition precinct) quickly evolved into a nationwide spatial engine spanning **17 candidate brownfield hubs across all 8 Australian States and Territories**.
+What began as my personal curiosity to test cloud spatial tools against a local industrial proposal in New South Wales (the Lake Macquarie / Hunter coal transition precinct) quickly evolved into a nationwide spatial engine spanning **17 candidate brownfield hubs across all 8 Australian States and Territories** (evaluating 4 detailed micro-sited sites in NSW alongside 13 simulated regional reference baselines).
 
 ---
 
@@ -35,7 +35,7 @@ The answer lies in **auditable spatial evidence**. Rather than evaluating sites 
 In the blog post, I dive deep into how Apache Sedona and Wherobots Cloud transformed an engineering workflow that typically takes 2–3 days on desktop GIS into an automated cloud pipeline running in seconds:
 
 1. **Massive Cloud Spatial Scale (15.91M Features):**
-   Ingesting and indexing 15.4M Geoscape cadastre parcels, 368k ABS meshblocks, 275k rail corridors, and 241k power transmission vectors across Australia's NEM and SWIS grids.
+   Indexing 15.4M Geoscape cadastre parcels, 368k ABS meshblocks, 275k rail corridors, and 241k power transmission vectors across Australia's NEM and SWIS grids—with 1.75M+ regional geometries in the Hunter deep-dive and 17 candidate sites audited against 33 localized sensitive receptors (19 schools, 14 hospitals) for 100% ABS land-use ground truth.
 
 2. **85.2% Storage Compression via Havasu (Spatial Iceberg):**
    Compressed raw vector datasets from **~2.9 GB down to ~430.7 MB** using cloud-native GeoParquet and Hilbert-curve spatial partitioning, accelerating full continental query scans from 18.4s down to **3.2s**.
@@ -67,7 +67,7 @@ A joint utilization analysis with Wherobots engineering highlighted key operatio
 A huge thank you to the Wherobots team for the platform, the invitation, and the opportunity to share this work with the global geospatial community!
 
 * 📖 **Read the Full Wherobots Technical Guest Post:**  
-  [Link to Wherobots Blog Post / docs/wherobots_ai_data_center_suitability_blog.html]
+  [Wherobots Official Blog: Scaling AI Data Center Siting](https://wherobots.com/blog/) | [`wherobots_ai_data_center_suitability_blog.html`](https://github.com/GetBack2Basics/hunter_spatial_crafter)  
 * ⚡ **Launch the Standalone Interactive National Report (Zero Cloud Cost):**  
   https://national-suitability-report.vercel.app
 * 📁 **Explore the Open-Source Repository:**  
