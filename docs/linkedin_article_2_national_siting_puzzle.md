@@ -7,9 +7,9 @@
 ---
 
 A few months ago, I started a personal learning project with a simple question:  
-*Can we use modern spatial data to objectively evaluate local infrastructure proposals before public money and grid capacity are committed?*
+*Can we use modern spatial data to objectively evaluate local infrastructure proposals before public money and land are committed?*
 
-I began by looking at a local council industrial rezoning proposal in Lake Macquarie, testing whether claims about buildable land stood up once environmental setbacks, pipelines, and flood overlays were subtracted.
+I began by looking at a local council industrial rezoning proposal in my local area, Lake Macquarie, testing whether claims about buildable land stood up once environmental setbacks, pipelines, and flood overlays were subtracted.
 
 As I explored cloud-native spatial tools, something clicked. The pipeline ran so quickly that expanding the model across NSW—and then scaling it nationally across every state and territory—became entirely feasible.
 
@@ -31,7 +31,7 @@ Meeting these standards requires moving away from static site marketing and subj
 
 ### How AuraSiting Crafter Works
 
-Built as an independent, data-first project, the engine evaluates sites across four balanced priorities:
+Built as an independent, private learning data-first project, the engine evaluates sites across four balanced priorities:
 
 1. **Power & Former Industrial Assets (40%)**: Prioritising direct connection to high-voltage lines and retired coal-fired power station substations—delivering firm power where the grid can handle it.
 2. **Sensitive Community Protection (25%)**: Applying an acoustic buffer model that excludes sites within 300 metres of residential areas, schools, and hospitals while maintaining manageable workforce commute distances.
@@ -52,7 +52,7 @@ Anyone can open the report in a web browser, search candidate sites by street ad
 
 I have documented the complete engineering journey—including how the system queried 4.92 million spatial geometries in 200.6 seconds on Wherobots Cloud—in my partner technical blog:
 
-* 🌐 **Interactive National Siting Dashboard**: [Explore the Live Report](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html)
+* 🌐 **Interactive National Siting Dashboard**: [Explore the Live Report](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/national_suitability_report.html). You must download it.
 * 📄 **Technical Data & Provenance Report**: [View Data Verification Audit](https://github.com/GetBack2Basics/hunter_spatial_crafter/blob/main/runner/data_verification_technical_report.html)
 * 🛠️ **Open Source Project Repository**: [hunter_spatial_crafter on GitHub](https://github.com/GetBack2Basics/hunter_spatial_crafter)
 

@@ -1,7 +1,7 @@
 # LinkedIn Technical Article Draft
 
 **Title:** Building a Cloud-Native Regional Spatial Siting Engine with Apache Sedona & Wherobots Cloud  
-**Author:** Corey (GetBack2Basics / Hunter Spatial Crafter)  
+**Author:** Corea (GetBack2Basics / Hunter Spatial Crafter)  
 **Target Audience:** GIS Engineers, Spatial Data Engineers, Cloud Architects, Urban Planners, Data Center Developers  
 
 ---

@@ -580,9 +580,9 @@ HTML_PAGE = """<!DOCTYPE html>
       <p class="subtitle">Multi-Criteria Decision Analysis (MCDA) Engine with Social & Sensitive Receptor Spatial Scoring</p>
     </div>
     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-      <a href="https://www.lakemac.com.au/files/assets/public/v/1/ecdev/documents/lake-mac-economic-development-action-plan.pdf" class="metadata-pill" target="_blank" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; text-decoration: none;">
+      <a href="https://www.lakemac.com.au/Projects/Macquarie-Coal-Complex-Transformation-Precinct" class="metadata-pill" target="_blank" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; text-decoration: none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        Proponent Masterplan (PDF)
+        Proponent Transformation Precinct ↗
       </a>
       <a href="data_verification_technical_report.html" class="metadata-pill" target="_blank" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399; text-decoration: none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -643,9 +643,9 @@ HTML_PAGE = """<!DOCTYPE html>
         <span class="stat-info-icon" title="View details">ℹ</span>
       </div>
       <span class="stat-val" style="color: #38bdf8;">~$36 AUD</span>
-      <span class="stat-desc">US$24.13 Cloud Spend</span>
+      <span class="stat-desc">~35 Runs • Decoupled Spatial DAG</span>
       <div class="stat-tooltip">
-        <strong>~$36 AUD (US$24.13):</strong> Total Wherobots Cloud compute spend across dozens of full automated headless batch ETL and analysis runs.
+        <strong>Why Compute Is So Low (~$1.03/run):</strong> Evaluated across ~35 full batch ETL runs (US$24.13 total). Achieved by decoupling heavy geometry joins from scoring, Iceberg delta partition scans, and offloading real-time What-If simulation to client-side DuckDB-WASM ($0.00 cloud compute).
       </div>
     </div>
   </div>
@@ -1138,7 +1138,7 @@ HTML_PAGE = """<!DOCTYPE html>
         <li><strong>NSW EPA Noise Policy for Industry (2017):</strong> Industrial noise trigger levels and sleep disturbance criteria ($d_0 = 500\text{m}$).</li>
         <li><strong>ICSM Cadastral Spatial Data Model (CSDM 2020):</strong> National and State Cadastral Lot/Plan standardization standard.</li>
         <li><strong>Geoscience Australia ELVIS Elevation Framework:</strong> High-resolution DEM slope filtering (<a href="https://elevation.fsdf.org.au/" target="_blank" style="color: #60a5fa; text-decoration: underline;">ELVIS FSDF ↗</a>).</li>
-        <li><strong>Lake Macquarie City Council Economic Development Action Plan:</strong> Masterplan clean energy transition strategy (<a href="https://www.lakemac.com.au/files/assets/public/v/1/ecdev/documents/lake-mac-economic-development-action-plan.pdf" target="_blank" style="color: #60a5fa; text-decoration: underline;">Official PDF ↗</a>).</li>
+        <li><strong>Lake Macquarie City Council Economic Development Action Plan:</strong> Masterplan clean energy transition strategy (<a href="https://www.lakemac.com.au/Projects/Macquarie-Coal-Complex-Transformation-Precinct" target="_blank" style="color: #60a5fa; text-decoration: underline;">Official PDF ↗</a>).</li>
         <li><strong>Wherobots & Antigravity Engineering Playbook:</strong> Enterprise spatial compute, incremental ETL and cost optimization guide (<a href="https://github.com/GetBack2Basics/CheatSheets/blob/main/wherobots_antigravity_playbook.md" target="_blank" style="color: #60a5fa; text-decoration: underline;">CheatSheets Playbook ↗</a>).</li>
       </ul>
     </div>
@@ -1410,7 +1410,7 @@ function updateAuditPanel(site) {
               <span class="audit-finger">${site.area_ha >= 15.0 ? '👍' : '👎'}</span>
             </div>
             <div class="audit-detail">
-              <strong>Proponent Claim:</strong> 100% of sub-precinct boundaries are buildable (~${claimedArea.toFixed(1)} ha gross) (<a href="https://www.lakemac.com.au/files/assets/public/v/1/ecdev/documents/lake-mac-economic-development-action-plan.pdf" target="_blank" style="color: #fbbf24; text-decoration: underline; font-weight: bold;">Proponent Masterplan & Action Plan PDF ↗</a>).
+              <strong>Proponent Claim:</strong> 100% of sub-precinct boundaries are buildable (~${claimedArea.toFixed(1)} ha gross) (<a href="https://www.lakemac.com.au/Projects/Macquarie-Coal-Complex-Transformation-Precinct" target="_blank" style="color: #fbbf24; text-decoration: underline; font-weight: bold;">Proponent Masterplan & Action Plan PDF ↗</a>).
             </div>
             <div class="audit-detail">
               <strong>Spatial Ground-Truth:</strong> Subtracting Riparian (30m), Pipeline (20m), Slope (>5%), and TSF Dam buffer risks (${lossesHa.toFixed(1)} ha excluded) yields <strong>${site.area_ha.toFixed(1)} ha</strong> net buildable pad space.
