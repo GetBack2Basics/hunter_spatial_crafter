@@ -56,7 +56,7 @@
 <p>When state planning portals publish quarterly cadastral updates, leveraging Apache Iceberg's ACID snapshot metadata allows Sedona to isolate and process only modified parcel geometries (<code>ST_Changes</code>) rather than executing full continental scans.</p>
 
 <h4>4. Zero-Cost Client Compute Offloading</h4>
-<p>By compiling precomputed distance topologies into the standalone HTML report and offloading real-time multi-criteria exploration to in-browser JavaScript and <strong>DuckDB-WASM</strong>, millions of interactive public scenario evaluations occur at <strong>$0.00 cloud compute cost</strong>.</p>
+<p>By compiling precomputed distance topologies into the standalone HTML report and offloading real-time multi-criteria exploration to <strong>in-browser JavaScript</strong>, millions of interactive public scenario evaluations occur at <strong>$0.00 cloud compute cost</strong>.</p>
 
 <hr>
 
@@ -68,7 +68,7 @@
   <tbody>
     <tr><td><strong>Cadastral &amp; Grid Ingestion</strong></td><td>Full scan (15.91M features)</td><td>Fingerprinted Cache Skip</td><td><strong>95% reduction</strong></td></tr>
     <tr><td><strong>Spatial Joins &amp; Buffer Overlay</strong></td><td>Full continental join (O(N×M))</td><td>Delta partitions only</td><td><strong>88% reduction</strong></td></tr>
-    <tr><td><strong>Multi-Criteria Re-Weighting</strong></td><td>Re-runs batch spatial SQL</td><td>In-browser DuckDB-WASM</td><td><strong>100% cloud savings ($0.00)</strong></td></tr>
+    <tr><td><strong>Multi-Criteria Re-Weighting</strong></td><td>Re-runs batch spatial SQL</td><td>In-browser JavaScript</td><td><strong>100% cloud savings ($0.00)</strong></td></tr>
     <tr><td><strong>Continuous CI/CD Batch Cost</strong></td><td>~$36 AUD</td><td>&lt; $5 AUD</td><td><strong>&gt; 85% Cost Reduction</strong></td></tr>
   </tbody>
 </table>
