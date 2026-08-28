@@ -38,15 +38,15 @@ HTML_PAGE = """<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js" integrity="sha384-twf8YFpk0FSzm0AmW2GRJjjnqIuQ2y86vZXh2roYI8O+kFbEBjSUDUT6U72w8shL" crossorigin="anonymous"></script>
   
   <!-- MarkerCluster CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="https://unpkg.com/esri-leaflet-cluster@3.0.1/dist/esri-leaflet-cluster.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/esri-leaflet-cluster@3.0.1/dist/esri-leaflet-cluster.js" integrity="sha384-wn1e+hcJ03McENzfHQOJF3I4O8Gi6YOcMOTnGuUFT+W7tG0wJ1ZLuTd2df3VD9eQ" crossorigin="anonymous"></script>
 
   <style>
     :root {
@@ -1373,6 +1373,48 @@ function getColor(score) {
 }
 
 // Function to update Proponent Claim Audit Panel with Advanced Physical Models
+/* --- Measured vs modeled provenance -------------------------------------------
+   candidatesData carries no simulated/baseline flag, so every surface has to
+   classify provenance itself. This is the single place that decides it: the four
+   NSW_MCC* parcels are micro-sited (measured against cadastral, slope and setback
+   ground truth); everything else is a modeled regional comparator.
+   Aggregate rows (state/region tables) have no candidate id, so they DERIVE from
+   this rather than testing state names separately — one rule, so a micro-sited
+   site outside NSW can never desync the surfaces.
+   Better still: add an `is_simulated` boolean to candidatesData upstream and this
+   whole block collapses to reading the field. --------------------------------- */
+function isMicroSited(c) {
+  return typeof c?.mb_code21 === 'string' && c.mb_code21.startsWith('NSW_MCC');
+}
+var _microSitedGroupCache = new Map();
+function groupsWithMicroSited(key) {
+  var cached = _microSitedGroupCache.get(key);
+  if (cached) return cached;
+  var out = new Set();
+  candidatesData.forEach(function (c) { if (isMicroSited(c) && c[key] != null) out.add(c[key]); });
+  _microSitedGroupCache.set(key, out);
+  return out;
+}
+function isAllSimulatedGroup(value, key) { return !groupsWithMicroSited(key).has(value); }
+function provenanceBadge(c, size) {
+  var micro = isMicroSited(c);
+  var fs = size === 'sm' ? '0.62rem' : '0.7rem';
+  return '<span title="' + (micro
+      ? 'Micro-sited: measured against cadastral, slope and setback ground truth.'
+      : 'Simulated baseline: a modeled regional comparator, not a measured site assessment.') +
+    '" style="display:inline-block;margin-top:3px;padding:1px 6px;border-radius:999px;font-size:' + fs +
+    ';font-weight:700;letter-spacing:0.04em;white-space:nowrap;' +
+    (micro ? 'background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.45);'
+           : 'background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.45);') +
+    '">' + (micro ? 'MICRO-SITED' : 'SIMULATED BASELINE') + '</span>';
+}
+function simulatedGroupTag(value, key, title) {
+  if (!isAllSimulatedGroup(value, key)) return '';
+  return ' <span title="' + title + '" style="display:inline-block;padding:1px 6px;border-radius:999px;' +
+    'font-size:0.6rem;font-weight:700;background:rgba(251,191,36,0.15);color:#fbbf24;' +
+    'border:1px solid rgba(251,191,36,0.45);white-space:nowrap;">SIMULATED</span>';
+}
+
 function updateAuditPanel(site) {
   const panel = document.getElementById('audit-panel');
   const title = document.getElementById('audit-site-title');
@@ -1382,7 +1424,7 @@ function updateAuditPanel(site) {
   title.textContent = `${site.town_name} (${site.state_name})`;
   panel.style.display = 'block';
   
-  const isLocal = site.state_name === "New South Wales" || site.town_name === "Macquarie" || site.town_name === "Killingworth" || site.town_name === "Teralba" || site.town_name === "Cockle Creek";
+  const isLocal = isMicroSited(site);
   
   const symbiosisStatus = site.is_thermal_symbiosis_viable ? 
     '<span style="color:#34d399; font-weight:bold;">VIABLE (≤ 506.8m)</span>' : 
@@ -1401,6 +1443,7 @@ function updateAuditPanel(site) {
 
   if (isLocal) {
     container.innerHTML = `
+      <div style="margin-bottom:0.6rem;">${provenanceBadge(site)}</div>
       <div class="audit-grid">
         <!-- Column 1: Core Siting Constraints -->
         <div style="display:flex; flex-direction:column; gap:1rem;">
@@ -1465,7 +1508,8 @@ function updateAuditPanel(site) {
   } else {
     container.innerHTML = `
       <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
-        <p>This candidate site represents a regional comparison baseline (<strong>${site.town_name}</strong> in ${site.state_name}).</p>
+        <p>${provenanceBadge(site)}</p>
+        <p><strong>This is a simulated regional baseline</strong> (<strong>${site.town_name}</strong> in ${site.state_name}) &mdash; a modeled comparator, not a measured site assessment. Its score is produced from modeled inputs and is not directly comparable with the micro-sited NSW Hunter parcels.</p>
         <p>It has a composite suitability score of <strong>${site.suitability_score.toFixed(3)}</strong>, substation distance of ${site.dist_to_substation_km ? site.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}, elevation head of <strong>${elevHead}m</strong>, and simulated pumped hydro potential of <strong>${hydroMwh} MWh</strong>.</p>
       </div>
     `;
@@ -1500,7 +1544,8 @@ function updateMarkers() {
 
     const popupContent = `
       <div style="font-family: 'Outfit', sans-serif; min-width: 200px;">
-        <h3 style="margin: 0 0 0.5rem 0; color: #60a5fa;">${c.town_name}</h3>
+        <h3 style="margin: 0 0 0.25rem 0; color: #60a5fa;">${c.town_name}</h3>
+        <div style="margin-bottom:0.5rem;">${provenanceBadge(c)}</div>
         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
           <tr><td style="padding: 2px 0; color: #94a3b8;">State</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.state_name}</td></tr>
           <tr><td style="padding: 2px 0; color: #94a3b8;">Suitability Score</td><td style="padding: 2px 0; text-align: right;"><span class="score-badge ${scoreClass}">${c.suitability_score.toFixed(3)}</span></td></tr>
@@ -1515,7 +1560,7 @@ function updateMarkers() {
     marker.bindPopup(popupContent);
     marker.on('click', () => {
       updateAuditPanel(c);
-      if (c.state_name === "New South Wales") {
+      if (isMicroSited(c)) {
         ['precinct', 'netdev', 'pipelines'].forEach(k => {
           toggleLayer(k, true);
           const chk = document.getElementById('layer-chk-' + k);
@@ -1557,6 +1602,7 @@ function renderLeaderboard() {
       <td>
         <div style="font-weight: 600;">${c.town_name}</div>
         <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.state_name}</div>
+        <div>${provenanceBadge(c, 'sm')}</div>
       </td>
       <td>
         ${lotPlanDisplay}
@@ -1587,7 +1633,7 @@ function renderLeaderboard() {
         marker.openPopup();
       }
 
-      if (c.state_name === "New South Wales") {
+      if (isMicroSited(c)) {
         ['precinct', 'netdev', 'pipelines'].forEach(k => {
           toggleLayer(k, true);
           const chk = document.getElementById('layer-chk-' + k);
@@ -1609,7 +1655,7 @@ function updateStats() {
     document.getElementById('stat-states').textContent = statesSet.size;
   }
   
-  const nswCandidates = candidatesData.filter(c => c.state_name === "New South Wales");
+  const nswCandidates = candidatesData.filter(isMicroSited);   // best MEASURED candidate
   if (nswCandidates.length > 0 && document.getElementById('stat-best')) {
     const sortedNSW = [...nswCandidates].sort((a, b) => b.suitability_score - a.suitability_score);
     document.getElementById('stat-best').textContent = `${sortedNSW[0].town_name} (${sortedNSW[0].suitability_score.toFixed(3)})`;
@@ -1689,8 +1735,8 @@ function openPersonaTab() {
 
 function renderDashboard() {
   candidatesData.sort((a, b) => {
-    const aIsHighRez = a.state_name === "New South Wales" ? 1 : 0;
-    const bIsHighRez = b.state_name === "New South Wales" ? 1 : 0;
+    const aIsHighRez = isMicroSited(a) ? 1 : 0;   // micro-sited ranks above modeled baselines
+    const bIsHighRez = isMicroSited(b) ? 1 : 0;
     if (aIsHighRez !== bIsHighRez) {
       return bIsHighRez - aIsHighRez;
     }
@@ -1787,7 +1833,7 @@ if (stateTableBody) {
   stateData.forEach(s => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-weight: 600;">${s.state_name}</td>
+      <td style="font-weight: 600;">${s.state_name}${simulatedGroupTag(s.state_name, 'state_name', 'All candidates in this state are simulated regional baselines, not measured site assessments.')}</td>
       <td>${s.candidate_count}</td>
       <td><span class="score-badge ${s.avg_suitability_score >= 0.85 ? 'score-high' : 'score-med'}">${s.avg_suitability_score.toFixed(3)}</span></td>
       <td>${s.avg_area_ha.toFixed(1)} ha</td>
@@ -1806,7 +1852,7 @@ if (regionTableBody) {
   regionData.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-weight: 600;">${r.region_name}</td>
+      <td style="font-weight: 600;">${r.region_name}${simulatedGroupTag(r.region_name, 'region_name', 'Simulated regional baseline — modeled comparator, not a measured site assessment.')}</td>
       <td>${r.state_name}</td>
       <td>${r.candidate_count}</td>
       <td><span class="score-badge ${r.avg_suitability_score >= 0.85 ? 'score-high' : 'score-med'}">${r.avg_suitability_score.toFixed(3)}</span></td>
