@@ -15,16 +15,179 @@ Incorporates:
 import os
 import sys
 import json
+import math
 import datetime
 import time
 
-sys.path.insert(0, ".")
-from scratch.prepare_authoritative_candidates import (
-    candidates, state_list, region_list,
-    precinct_geojson, net_dev_geojson, pipelines_geojson, rail_geojson, bio_geojson,
-    ref_data, calculations_only, notes_html, tbody_html, next_steps_html, recent_changes_html,
-    cost_reduction_html
-)
+
+def load_attachment(name):
+    """Read a file from runner/attachments/ and return its text content."""
+    path = os.path.join("runner", "attachments", name)
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def load_layer(name):
+    """Read a GeoJSON layer from runner/attachments/layers/ and return parsed JSON."""
+    path = os.path.join("runner", "attachments", "layers", name)
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# Load candidate sites and run scoring
+# ---------------------------------------------------------------------------
+candidates_raw = json.loads(load_attachment("candidates.json"))
+
+candidates = []
+for c in candidates_raw:
+    dist_p_m = c["dist_to_substation_km"] * 1000.0
+    if 100.0 <= dist_p_m <= 500.0:
+        s_power = 1.0
+    elif dist_p_m < 100.0:
+        s_power = 0.70
+    elif dist_p_m > 5000.0:
+        s_power = 0.0
+    else:
+        s_power = max(0.0, 1.0 - ((dist_p_m - 500.0) / 4500.0))
+
+    dist_sens_m = c["dist_to_sensitive_m"]
+    if dist_sens_m < 300.0:
+        s_sensitive = 0.00
+        sens_status = "HARD EXCLUSION (<300m)"
+        is_excluded = True
+    elif 300.0 <= dist_sens_m < 500.0:
+        s_sensitive = 0.20 + ((dist_sens_m - 300.0) / 200.0) * 0.30
+        sens_status = "HIGH PENALTY (300-500m)"
+        is_excluded = False
+    elif 500.0 <= dist_sens_m < 1500.0:
+        k = 0.01
+        d0 = 500.0
+        sig = 1.0 / (1.0 + math.exp(-k * (dist_sens_m - d0)))
+        s_sensitive = min(1.00, 0.80 + sig * 0.20)
+        sens_status = "OPTIMAL BUFFER (500m-1.5km)"
+        is_excluded = False
+    elif 1500.0 <= dist_sens_m < 5000.0:
+        s_sensitive = 1.00
+        sens_status = "OPTIMAL WORKFORCE (1.5-5km)"
+        is_excluded = False
+    else:
+        decay = (dist_sens_m - 5000.0) / 10000.0
+        s_sensitive = max(0.70, 1.00 - decay * 0.30)
+        sens_status = "COMMUTE DECAY (>5km)"
+        is_excluded = False
+
+    dist_w_m = c["dist_to_wwtw_km"] * 1000.0
+    if dist_w_m <= 1000.0:
+        s_water = 1.0
+    elif dist_w_m > 10000.0:
+        s_water = 0.0
+    else:
+        s_water = max(0.0, 1.0 - ((dist_w_m - 1000.0) / 9000.0))
+
+    area_ha = c["area_ha"]
+    if area_ha >= 15.0:
+        s_size = 1.0
+    elif area_ha < 3.0:
+        s_size = 0.10
+    else:
+        s_size = (area_ha - 3.0) / 12.0
+
+    if is_excluded or c["slope_pct"] > 5.0:
+        suitability_score = 0.0
+    else:
+        suitability_score = (s_power * 0.40) + (s_sensitive * 0.25) + (s_water * 0.20) + (s_size * 0.15)
+
+    rec = dict(c)
+    rec.update({
+        "mb_cat21": "Industrial",
+        "power_score": round(s_power, 3),
+        "sensitive_score": round(s_sensitive, 3),
+        "water_score": round(s_water, 3),
+        "size_score": round(s_size, 3),
+        "suitability_score": round(suitability_score, 3),
+        "dist_to_sensitive_km": round(dist_sens_m / 1000.0, 2),
+        "sensitive_status": sens_status,
+        "is_excluded": is_excluded,
+        "area_ha_raw": c.get("proponent_claimed_area_ha", area_ha),
+        "area_ha_declared": area_ha,
+        "area_ha_dedeclared": area_ha + 15.2 if not c.get("is_simulated", True) else area_ha,
+        "suitability_score_raw": round(suitability_score, 3),
+        "suitability_score_declared": round(suitability_score, 3),
+        "suitability_score_dedeclared": round(suitability_score, 3)
+    })
+    candidates.append(rec)
+
+# Calculate state and regional aggregates
+states = {}
+regions = {}
+for c in candidates:
+    st = c["state_name"]
+    if st not in states:
+        states[st] = {"state_name": st, "candidate_count": 0, "sum_suit": 0.0, "sum_area": 0.0, "sum_pow": 0.0, "sum_wat": 0.0, "sum_sens": 0.0, "sum_slope": 0.0}
+    states[st]["candidate_count"] += 1
+    states[st]["sum_suit"] += c["suitability_score"]
+    states[st]["sum_area"] += c["area_ha"]
+    states[st]["sum_pow"] += c["dist_to_substation_km"] or 0.0
+    states[st]["sum_wat"] += c["dist_to_wwtw_km"] or 0.0
+    states[st]["sum_sens"] += c["dist_to_sensitive_km"] or 0.0
+    states[st]["sum_slope"] += c.get("slope_pct", 1.5)
+
+    reg = (c["region_name"], c["state_name"])
+    if reg not in regions:
+        regions[reg] = {"region_name": c["region_name"], "state_name": st, "candidate_count": 0, "sum_suit": 0.0, "sum_area": 0.0, "sum_pow": 0.0, "sum_wat": 0.0, "sum_sens": 0.0, "sum_slope": 0.0}
+    regions[reg]["candidate_count"] += 1
+    regions[reg]["sum_suit"] += c["suitability_score"]
+    regions[reg]["sum_area"] += c["area_ha"]
+    regions[reg]["sum_pow"] += c["dist_to_substation_km"] or 0.0
+    regions[reg]["sum_wat"] += c["dist_to_wwtw_km"] or 0.0
+    regions[reg]["sum_sens"] += c["dist_to_sensitive_km"] or 0.0
+    regions[reg]["sum_slope"] += c.get("slope_pct", 1.5)
+
+state_list = []
+for s in states.values():
+    n = s["candidate_count"]
+    state_list.append({
+        "state_name": s["state_name"],
+        "candidate_count": n,
+        "avg_suitability_score": s["sum_suit"] / n,
+        "avg_area_ha": s["sum_area"] / n,
+        "avg_dist_substation_km": s["sum_pow"] / n,
+        "avg_dist_wwtw_km": s["sum_wat"] / n,
+        "avg_dist_sensitive_km": s["sum_sens"] / n,
+        "avg_slope_pct": s["sum_slope"] / n
+    })
+state_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
+
+region_list = []
+for r in regions.values():
+    n = r["candidate_count"]
+    region_list.append({
+        "region_name": r["region_name"],
+        "state_name": r["state_name"],
+        "candidate_count": n,
+        "avg_suitability_score": r["sum_suit"] / n,
+        "avg_area_ha": r["sum_area"] / n,
+        "avg_dist_substation_km": r["sum_pow"] / n,
+        "avg_dist_wwtw_km": r["sum_wat"] / n,
+        "avg_dist_sensitive_km": r["sum_sens"] / n,
+        "avg_slope_pct": r["sum_slope"] / n
+    })
+region_list.sort(key=lambda x: x["avg_suitability_score"], reverse=True)
+
+# Load GeoJSON layers from runner/attachments/layers/
+precinct_geojson = load_layer("precinct_boundary.json")
+net_dev_geojson = load_layer("net_developable.json")
+pipelines_geojson = load_layer("pipeline_corridors.json")
+rail_geojson = load_layer("rail_network.json")
+bio_geojson = load_layer("biodiversity_constraints.json")
+
+# Load methodology notes from runner/attachments/methodology.json
+ref_data = json.loads(load_attachment("methodology.json"))
+notes_html = ""
+for note_val in ref_data.get("methodology_notes", {}).values():
+    notes_html += f"<li><strong>{note_val['title']}:</strong> {note_val['text']}</li>\n"
+calculations_only = {k: v for k, v in ref_data.items() if k != "methodology_notes"}
 
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
@@ -38,15 +201,7 @@ HTML_PAGE = """<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
-  
-  <!-- MarkerCluster CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="https://unpkg.com/esri-leaflet-cluster@3.0.1/dist/esri-leaflet-cluster.js"></script>
+  __CDN_ASSETS__
 
   <style>
     :root {
@@ -104,8 +259,9 @@ HTML_PAGE = """<!DOCTYPE html>
     }
 
     .container {
-      max-width: 1480px;
-      margin: 0 auto;
+      width: 100%;
+      padding: 0 1.5rem;
+      box-sizing: border-box;
     }
 
     header {
@@ -1134,25 +1290,18 @@ HTML_PAGE = """<!DOCTYPE html>
     <div id="whitepapers-specs" class="tab-content" style="max-height: 450px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6;">
       <h3 style="color: #60a5fa;">Whitepapers, Engineering Standards & Citations</h3>
       <ul style="padding-left: 1.5rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
-        <li><strong>AS 1055:2018:</strong> Acoustics — Description and measurement of environmental noise for sensitive receptor buffers.</li>
-        <li><strong>NSW EPA Noise Policy for Industry (2017):</strong> Industrial noise trigger levels and sleep disturbance criteria ($d_0 = 500\text{m}$).</li>
-        <li><strong>ICSM Cadastral Spatial Data Model (CSDM 2020):</strong> National and State Cadastral Lot/Plan standardization standard.</li>
-        <li><strong>Geoscience Australia ELVIS Elevation Framework:</strong> High-resolution DEM slope filtering (<a href="https://elevation.fsdf.org.au/" target="_blank" style="color: #60a5fa; text-decoration: underline;">ELVIS FSDF ↗</a>).</li>
-        <li><strong>Lake Macquarie City Council Economic Development Action Plan:</strong> Masterplan clean energy transition strategy (<a href="https://www.lakemac.com.au/Projects/Macquarie-Coal-Complex-Transformation-Precinct" target="_blank" style="color: #60a5fa; text-decoration: underline;">Official PDF ↗</a>).</li>
-        <li><strong>Wherobots & Antigravity Engineering Playbook:</strong> Enterprise spatial compute, incremental ETL and cost optimization guide (<a href="https://github.com/GetBack2Basics/CheatSheets/blob/main/wherobots_antigravity_playbook.md" target="_blank" style="color: #60a5fa; text-decoration: underline;">CheatSheets Playbook ↗</a>).</li>
+        __WHITEPAPERS_HTML__
       </ul>
     </div>
 
     <!-- Tab 7: Speed Mechanics -->
     <div id="speed-mechanics" class="tab-content" style="max-height: 450px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6;">
-      <h3 style="color: #34d399;">Havasu Spatial Partitioning & Indexing Performance</h3>
-      <p>By leveraging Apache Sedona on Wherobots Cloud with Hilbert-curve spatial partitioning, query scan times across 15.91 million national geometries dropped from <strong>18.4s to 3.2s</strong>.</p>
+      __SPEED_MECHANICS_HTML__
     </div>
 
     <!-- Tab 8: Simulation Sandbox Mechanics -->
     <div id="simulation-sandbox" class="tab-content" style="max-height: 450px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6;">
-      <h3 style="color: #c084fc;">Real-Time Browser Simulation Mechanics</h3>
-      <p>The What-If Sandbox recalibrates composite MCDA weights and candidate ranks instantly in the browser without server round-trips.</p>
+      __SIMULATION_SANDBOX_HTML__
     </div>
 
     <!-- Tab 9: Calculations -->
@@ -1372,6 +1521,9 @@ function getColor(score) {
                          '#ef4444';
 }
 
+// Provenance helpers loaded from runner/attachments/dashboard_provenance.js at build time.
+__PROVENANCE_JS__
+
 // Function to update Proponent Claim Audit Panel with Advanced Physical Models
 function updateAuditPanel(site) {
   const panel = document.getElementById('audit-panel');
@@ -1382,7 +1534,7 @@ function updateAuditPanel(site) {
   title.textContent = `${site.town_name} (${site.state_name})`;
   panel.style.display = 'block';
   
-  const isLocal = site.state_name === "New South Wales" || site.town_name === "Macquarie" || site.town_name === "Killingworth" || site.town_name === "Teralba" || site.town_name === "Cockle Creek";
+  const isLocal = isMicroSited(site);
   
   const symbiosisStatus = site.is_thermal_symbiosis_viable ? 
     '<span style="color:#34d399; font-weight:bold;">VIABLE (≤ 506.8m)</span>' : 
@@ -1401,6 +1553,7 @@ function updateAuditPanel(site) {
 
   if (isLocal) {
     container.innerHTML = `
+      <div style="margin-bottom:0.6rem;">${provenanceBadge(site)}</div>
       <div class="audit-grid">
         <!-- Column 1: Core Siting Constraints -->
         <div style="display:flex; flex-direction:column; gap:1rem;">
@@ -1465,7 +1618,8 @@ function updateAuditPanel(site) {
   } else {
     container.innerHTML = `
       <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6;">
-        <p>This candidate site represents a regional comparison baseline (<strong>${site.town_name}</strong> in ${site.state_name}).</p>
+        <p>${provenanceBadge(site)}</p>
+        <p><strong>This is a simulated regional baseline</strong> (<strong>${site.town_name}</strong> in ${site.state_name}) &mdash; a modeled comparator, not a measured site assessment. Its score is produced from modeled inputs and is not directly comparable with the micro-sited NSW Hunter parcels.</p>
         <p>It has a composite suitability score of <strong>${site.suitability_score.toFixed(3)}</strong>, substation distance of ${site.dist_to_substation_km ? site.dist_to_substation_km.toFixed(2) + ' km' : 'N/A'}, elevation head of <strong>${elevHead}m</strong>, and simulated pumped hydro potential of <strong>${hydroMwh} MWh</strong>.</p>
       </div>
     `;
@@ -1499,8 +1653,9 @@ function updateMarkers() {
     });
 
     const popupContent = `
-      <div style="font-family: 'Outfit', sans-serif; min-width: 200px;">
-        <h3 style="margin: 0 0 0.5rem 0; color: #60a5fa;">${c.town_name}</h3>
+        <div style="font-family: 'Outfit', sans-serif; min-width: 200px;">
+        <h3 style="margin: 0 0 0.25rem 0; color: #60a5fa;">${c.town_name}</h3>
+        <div style="margin-bottom:0.5rem;">${provenanceBadge(c)}</div>
         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
           <tr><td style="padding: 2px 0; color: #94a3b8;">State</td><td style="padding: 2px 0; text-align: right; font-weight: bold;">${c.state_name}</td></tr>
           <tr><td style="padding: 2px 0; color: #94a3b8;">Suitability Score</td><td style="padding: 2px 0; text-align: right;"><span class="score-badge ${scoreClass}">${c.suitability_score.toFixed(3)}</span></td></tr>
@@ -1515,7 +1670,7 @@ function updateMarkers() {
     marker.bindPopup(popupContent);
     marker.on('click', () => {
       updateAuditPanel(c);
-      if (c.state_name === "New South Wales") {
+      if (isMicroSited(c)) {
         ['precinct', 'netdev', 'pipelines'].forEach(k => {
           toggleLayer(k, true);
           const chk = document.getElementById('layer-chk-' + k);
@@ -1556,8 +1711,9 @@ function renderLeaderboard() {
     tr.innerHTML = `
       <td>
         <div style="font-weight: 600;">${c.town_name}</div>
-        <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.state_name}</div>
-      </td>
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.state_name}</div>
+          <div>${provenanceBadge(c, 'sm')}</div>
+        </td>
       <td>
         ${lotPlanDisplay}
         ${addressDisplay}
@@ -1609,7 +1765,7 @@ function updateStats() {
     document.getElementById('stat-states').textContent = statesSet.size;
   }
   
-  const nswCandidates = candidatesData.filter(c => c.state_name === "New South Wales");
+  const nswCandidates = candidatesData.filter(isMicroSited);   // best MEASURED candidate
   if (nswCandidates.length > 0 && document.getElementById('stat-best')) {
     const sortedNSW = [...nswCandidates].sort((a, b) => b.suitability_score - a.suitability_score);
     document.getElementById('stat-best').textContent = `${sortedNSW[0].town_name} (${sortedNSW[0].suitability_score.toFixed(3)})`;
@@ -1618,39 +1774,9 @@ function updateStats() {
 
 // -------------------------------------------------------------
 // Stakeholder Persona Configuration & Switcher Engine ("I am a...")
+// Loaded from runner/attachments/persona_configs.json at build time.
 // -------------------------------------------------------------
-const PERSONA_CONFIGS = {
-  'general-public': {
-    name: 'General Public',
-    badgeColor: '#38bdf8',
-    weights: { power: 40, sensitive: 25, water: 20, size: 15, targetSize: 15 },
-    tsfExcluded: true
-  },
-  'planner': {
-    name: 'Planner',
-    badgeColor: '#38bdf8',
-    weights: { power: 40, sensitive: 25, water: 20, size: 15, targetSize: 15 },
-    tsfExcluded: true
-  },
-  'regulator': {
-    name: 'Regulator',
-    badgeColor: '#fbbf24',
-    weights: { power: 40, sensitive: 25, water: 25, size: 10, targetSize: 15 },
-    tsfExcluded: true
-  },
-  'developer': {
-    name: 'Developer',
-    badgeColor: '#34d399',
-    weights: { power: 50, sensitive: 15, water: 15, size: 20, targetSize: 20 },
-    tsfExcluded: false
-  },
-  'community': {
-    name: 'Community',
-    badgeColor: '#c084fc',
-    weights: { power: 25, sensitive: 40, water: 25, size: 10, targetSize: 10 },
-    tsfExcluded: true
-  }
-};
+const PERSONA_CONFIGS = __PERSONA_CONFIGS_JSON__;
 
 function selectPersona(personaKey) {
   const cfg = PERSONA_CONFIGS[personaKey];
@@ -1689,8 +1815,8 @@ function openPersonaTab() {
 
 function renderDashboard() {
   candidatesData.sort((a, b) => {
-    const aIsHighRez = a.state_name === "New South Wales" ? 1 : 0;
-    const bIsHighRez = b.state_name === "New South Wales" ? 1 : 0;
+    const aIsHighRez = isMicroSited(a) ? 1 : 0;   // micro-sited ranks above modeled baselines
+    const bIsHighRez = isMicroSited(b) ? 1 : 0;
     if (aIsHighRez !== bIsHighRez) {
       return bIsHighRez - aIsHighRez;
     }
@@ -1787,7 +1913,7 @@ if (stateTableBody) {
   stateData.forEach(s => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-weight: 600;">${s.state_name}</td>
+      <td style="font-weight: 600;">${s.state_name}${simulatedGroupTag(s.state_name, 'state_name', 'All candidates in this state are simulated regional baselines, not measured site assessments.')}</td>
       <td>${s.candidate_count}</td>
       <td><span class="score-badge ${s.avg_suitability_score >= 0.85 ? 'score-high' : 'score-med'}">${s.avg_suitability_score.toFixed(3)}</span></td>
       <td>${s.avg_area_ha.toFixed(1)} ha</td>
@@ -1806,7 +1932,7 @@ if (regionTableBody) {
   regionData.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-weight: 600;">${r.region_name}</td>
+      <td style="font-weight: 600;">${r.region_name}${simulatedGroupTag(r.region_name, 'region_name', 'Simulated regional baseline — modeled comparator, not a measured site assessment.')}</td>
       <td>${r.state_name}</td>
       <td>${r.candidate_count}</td>
       <td><span class="score-badge ${r.avg_suitability_score >= 0.85 ? 'score-high' : 'score-med'}">${r.avg_suitability_score.toFixed(3)}</span></td>
@@ -1876,9 +2002,12 @@ if (calcContainer && calcReferences) {
 </html>
 """
 
-# Replace placeholders
+# ---------------------------------------------------------------------------
+# Assemble final HTML — all content from runner/attachments/
+# ---------------------------------------------------------------------------
 html_final = HTML_PAGE
 html_final = html_final.replace("__FOOTER_TIMESTAMP__", datetime.datetime.now().astimezone().strftime("%Y%m%d%H%M"))
+# Data
 html_final = html_final.replace("__CANDIDATES_JSON__", json.dumps(candidates))
 html_final = html_final.replace("__STATE_JSON__", json.dumps(state_list))
 html_final = html_final.replace("__REGION_JSON__", json.dumps(region_list))
@@ -1887,12 +2016,19 @@ html_final = html_final.replace("__NET_DEVELOPABLE_JSON__", json.dumps(net_dev_g
 html_final = html_final.replace("__PIPELINES_JSON__", json.dumps(pipelines_geojson))
 html_final = html_final.replace("__RAIL_NETWORK_JSON__", json.dumps(rail_geojson))
 html_final = html_final.replace("__BIODIVERSITY_JSON__", json.dumps(bio_geojson))
-html_final = html_final.replace("__METHODOLOGY_NOTES__", notes_html)
-html_final = html_final.replace("__DATA_SOURCES_ROWS__", tbody_html)
-html_final = html_final.replace("__RECENT_CHANGES_HTML__", recent_changes_html)
-html_final = html_final.replace("__NEXT_STEPS_HTML__", next_steps_html)
-html_final = html_final.replace("__COST_REDUCTION_HTML__", cost_reduction_html)
 html_final = html_final.replace("__CALCULATION_REFERENCES_JSON__", json.dumps(calculations_only))
+# Attachments (content files from runner/attachments/)
+html_final = html_final.replace("__CDN_ASSETS__", load_attachment("cdn_assets.html"))
+html_final = html_final.replace("__PROVENANCE_JS__", load_attachment("dashboard_provenance.js"))
+html_final = html_final.replace("__PERSONA_CONFIGS_JSON__", load_attachment("persona_configs.json"))
+html_final = html_final.replace("__METHODOLOGY_NOTES__", notes_html)
+html_final = html_final.replace("__DATA_SOURCES_ROWS__", load_attachment("data_sources.html"))
+html_final = html_final.replace("__RECENT_CHANGES_HTML__", load_attachment("recent_changes.html"))
+html_final = html_final.replace("__NEXT_STEPS_HTML__", load_attachment("next_steps.html"))
+html_final = html_final.replace("__COST_REDUCTION_HTML__", load_attachment("cost_reduction_tips.html"))
+html_final = html_final.replace("__SPEED_MECHANICS_HTML__", load_attachment("speed_mechanics.html"))
+html_final = html_final.replace("__SIMULATION_SANDBOX_HTML__", load_attachment("simulation_sandbox.html"))
+html_final = html_final.replace("__WHITEPAPERS_HTML__", load_attachment("whitepapers.html"))
 
 output_path = "runner/national_suitability_report.html"
 with open(output_path, "w", encoding="utf-8") as f:
