@@ -32,7 +32,7 @@ In the spirit of open engineering, we also share cloud cost governance insights:
 A huge thank you to the Wherobots team for the invitation to share this work!
 
 🚀 Explore the Project:
-📖 Full Wherobots Blog: https://wherobots.com/blog/
+📖 Full Wherobots Blog: https://wherobots.com/blog/ai-data-center-site-suitability-wherobots/
 ⚡ Interactive Report (Zero-Cost): https://national-suitability-report.vercel.app
 📁 GitHub Repo: https://github.com/GetBack2Basics/hunter_spatial_crafter
 📖 Engineering Playbook: https://github.com/GetBack2Basics/CheatSheets/blob/main/wherobots_antigravity_playbook.md

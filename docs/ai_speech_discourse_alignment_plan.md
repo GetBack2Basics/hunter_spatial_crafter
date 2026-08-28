@@ -38,7 +38,7 @@ The interactive runner UI and What-If sandbox incorporate neutral policy presets
 | Deliverable | Location | Purpose |
 | :--- | :--- | :--- |
 | **README Overview** | [`README.md`](file:///c:/Projects/hunter_spatial_crafter/README.md) | Official project documentation, story arc, and capability matrix. |
-| **Guest Blog Announcement** | [`docs/linkedin_article_3_wherobots_guest_blog_announcement.md`](file:///c:/Projects/hunter_spatial_crafter/docs/linkedin_article_3_wherobots_guest_blog_announcement.md) | Technical thought-leadership announcing the cloud-native spatial siting engine. |
+| **Author Biography** | [`docs/author_bio.md`](file:///c:/Projects/hunter_spatial_crafter/docs/author_bio.md) | Professional profile, credentials, and technical capabilities. |
 | **DPHI Late Submission** | [`docs/dphi_macquarie_coal_precinct_late_submission.md`](file:///c:/Projects/hunter_spatial_crafter/docs/dphi_macquarie_coal_precinct_late_submission.md) | Formal spatial submission for the Macquarie Coal Complex precinct transformation. |
 | **NSW Govt Geospatial Benefits** | [`docs/nsw_govt_geospatial_benefits.md`](file:///c:/Projects/hunter_spatial_crafter/docs/nsw_govt_geospatial_benefits.md) | Cross-agency spatial benefits, cadastral alignment, and state planning analysis. |
 | **Cost & Compute Architecture** | [`docs/cost_reduction_and_incremental_compute.md`](file:///c:/Projects/hunter_spatial_crafter/docs/cost_reduction_and_incremental_compute.md) | Engineering playbook for distributed spatial SQL, caching, and $0 client-side WASM compute. |
