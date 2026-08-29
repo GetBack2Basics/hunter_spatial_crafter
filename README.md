@@ -1,9 +1,15 @@
-# AuraSiting Crafter
+# Hunter Spatial Crafter is now Aura Siting Crafter
 
 **Tagline:** *The Australian Regional & AI Infrastructure Siting Engine*  
 **Repository:** `hunter_spatial_crafter`  
 **Author:** George Chandeep Corea  
 
+This project is now archived and is being maintained as https://github.com/GetBack2Basics/aura_siting_crafter
+
+See
+https://www.linkedin.com/feed/update/urn:li:activity:7498685070052847616/
+and
+https://wherobots.com/blog/ai-data-center-site-suitability-wherobots/
 ---
 
 ## 🌟 The Story Arc
